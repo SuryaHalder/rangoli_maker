@@ -1,0 +1,2878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Utsav Rangoli Studio — Live Collaborative Diwali Rangoli Maker</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #f59e0b;
+      --gold-light: #fde68a;
+      --deep-bg: #140c08;
+      --panel-bg: rgba(31, 18, 12, 0.92);
+      --panel-border: rgba(245, 158, 11, 0.28);
+    }
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at 50% 20%, #2a150d 0%, #120905 70%, #090402 100%);
+      color: #fef3c7;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    .font-serif-festive {
+      font-family: 'Playfair Display', Georgia, serif;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(20, 12, 8, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(245, 158, 11, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(245, 158, 11, 0.7);
+    }
+    .glass-panel {
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(254, 243, 199, 0.1);
+    }
+    .swatch-btn {
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .swatch-btn:hover {
+      transform: scale(1.12);
+    }
+    .swatch-btn.active {
+      transform: scale(1.18);
+      box-shadow: 0 0 0 2px #140c08, 0 0 0 4px #fbbf24, 0 0 12px rgba(251, 191, 36, 0.8);
+    }
+    .tool-btn {
+      transition: all 0.18s ease;
+    }
+    .tool-btn.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.32), rgba(217, 119, 6, 0.2));
+      border-color: #fbbf24;
+      color: #fef08a;
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);
+    }
+    .prop-btn.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.35), rgba(234, 88, 12, 0.25));
+      border-color: #fbbf24;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+    }
+    .canvas-stage-wrapper {
+      background: radial-gradient(circle at center, rgba(245, 158, 11, 0.12) 0%, rgba(0, 0, 0, 0.65) 100%);
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.85), 0 0 35px rgba(245, 158, 11, 0.15);
+    }
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7)); }
+      50% { filter: drop-shadow(0 0 14px rgba(249, 115, 22, 0.95)); }
+    }
+    .diya-icon-glow {
+      animation: pulseGlow 2.4s infinite ease-in-out;
+    }
+    input[type="range"] {
+      accent-color: #f59e0b;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between">
+
+  <!-- WELCOME / ARTIST NAME ENTRY PAGE (SHOWN BEFORE ENTERING ANY ROOM) -->
+  <div id="welcomeEntryGate" class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style="background: radial-gradient(circle at 50% 25%, #36190d 0%, #140a05 65%, #080301 100%);">
+    <div class="glass-panel rounded-3xl max-w-md w-full p-6 sm:p-7 border border-amber-400/40 shadow-2xl relative overflow-hidden">
+      <!-- Decorative corner glow -->
+      <div class=" -top-16 -right-16 w-36 h-36 rounded-full bg-amber-500/15 blur-2xl pointer-events-none absolute"></div>
+      <div class=" -bottom-16 -left-16 w-36 h-36 rounded-full bg-orange-600/15 blur-2xl pointer-events-none absolute"></div>
+
+      <!-- Brand & Diya Emblem -->
+      <div class="flex flex-col items-center text-center mb-5">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-600 to-rose-700 flex items-center justify-center shadow-xl shadow-amber-500/25 border border-amber-200/50 mb-3">
+          <svg class="w-9 h-9 text-amber-100 diya-icon-glow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C10.5 4.8 9 7.2 9 9.5C9 11.4 10.3 13 12 13C13.7 13 15 11.4 15 9.5C15 7.2 13.5 4.8 12 2ZM4 15C4 18.9 7.6 22 12 22C16.4 22 20 18.9 20 15H4Z"/>
+          </svg>
+        </div>
+        <h2 class="font-serif-festive text-2xl sm:text-3xl font-bold text-amber-200 tracking-wide">
+          Utsav Rangoli Studio
+        </h2>
+        <p class="text-xs text-amber-200/75 mt-1">
+          Live Collaborative Diwali Courtyard &bull; Hand-Drawn Rangoli &amp; Glowing Diyas
+        </p>
+      </div>
+
+      <!-- Shared Room Invitation Banner (shown if URL has ?room= or #room=) -->
+      <div id="entryInvitedBanner" class="hidden mb-4 p-3 rounded-xl bg-emerald-950/50 border border-emerald-400/40 text-center">
+        <div class="text-[11px] uppercase tracking-wider font-semibold text-emerald-300">You've Been Invited to Join Room</div>
+        <div id="entryInvitedRoomCode" class="text-base font-mono font-bold text-amber-200 mt-0.5">UTSAV-...</div>
+      </div>
+
+      <!-- Step 1: Enter Artist Name -->
+      <div class="mb-4">
+        <label for="entryArtistNameInput" class="block text-xs font-bold uppercase tracking-wider text-amber-300 mb-1.5">
+          Your Name <span class="text-rose-400">*</span>
+        </label>
+        <input
+          id="entryArtistNameInput"
+          type="text"
+          maxlength="18"
+          placeholder="Enter your name (e.g. Aarav, Priya...)"
+          class="w-full bg-stone-950/90 border-2 border-amber-500/45 focus:border-amber-400 rounded-xl px-3.5 py-2.5 text-sm text-amber-100 placeholder-amber-200/35 focus:outline-none transition"
+        />
+        <p id="entryNameError" class="hidden text-xs text-rose-400 mt-1.5 font-medium">
+          Please enter your name before joining the Rangoli courtyard.
+        </p>
+      </div>
+
+      <!-- Optional Room Mode (Join by Code vs Create New Unique Room) -->
+      <div class="mb-5 pt-3 border-t border-amber-500/20">
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="entryRoomCodeInput" class="text-[11px] font-semibold uppercase tracking-wider text-amber-300/90">
+            Room ID (Leave as-is or paste a friend's code)
+          </label>
+          <button id="entryNewUniqueIdBtn" type="button" class="text-[11px] text-amber-400 hover:text-amber-200 underline font-medium">
+            Generate New ID
+          </button>
+        </div>
+        <input
+          id="entryRoomCodeInput"
+          type="text"
+          maxlength="22"
+          placeholder="UTSAV-XXXX-XXXXXX"
+          class="w-full bg-stone-950/80 border border-amber-500/35 focus:border-amber-400 rounded-xl px-3.5 py-2 text-xs font-mono uppercase text-amber-200 focus:outline-none transition"
+        />
+      </div>
+
+      <!-- Primary Enter Button -->
+      <button
+        id="enterCourtyardBtn"
+        type="button"
+        class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-bold text-sm shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition transform active:scale-[0.99]"
+      >
+        <span>🪔</span>
+        <span id="enterCourtyardBtnLabel">Enter Rangoli Room</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP NAVIGATION & ROOM BAR -->
+  <header class="glass-panel sticky top-0 z-30 px-3 py-2.5 sm:px-5 border-b border-amber-500/30">
+    <div class="max-w-[1600px] mx-auto flex flex-wrap items-center justify-between gap-2">
+      <!-- Brand Title -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-700 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-300/40">
+          <svg class="w-5 h-5 text-amber-100 diya-icon-glow" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C10.5 4.8 9 7.2 9 9.5C9 11.4 10.3 13 12 13C13.7 13 15 11.4 15 9.5C15 7.2 13.5 4.8 12 2ZM4 15C4 18.9 7.6 22 12 22C16.4 22 20 18.9 20 15H4Z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-serif-festive text-base sm:text-lg font-bold tracking-wide text-amber-200 leading-none">
+              Utsav Rangoli Studio
+            </h1>
+            <span class="hidden md:inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+              <span id="connectionDot" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="connectionStatusText">Live Room Ready</span>
+            </span>
+          </div>
+          <p class="text-[11px] text-amber-200/60 hidden sm:block">Collaborative Diwali Courtyard &bull; Real-time Powder, Chalk &amp; Glowing Diyas</p>
+        </div>
+      </div>
+
+      <!-- Room Collaboration Controls -->
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <!-- Active Collaborators Pill -->
+        <div class="flex items-center gap-1.5 bg-black/40 border border-amber-500/30 rounded-lg px-2.5 py-1 text-xs">
+          <div id="participantsAvatars" class="flex -space-x-1.5 overflow-hidden"></div>
+          <span id="participantCountLabel" class="text-amber-200/90 font-medium ml-1">1 Artist</span>
+        </div>
+
+        <!-- Create Room & Share Room Controls -->
+        <div class="flex items-center bg-black/45 border border-amber-500/35 rounded-lg p-0.5 gap-1">
+          <button id="openRoomModalBtn" type="button" class="px-2.5 py-1 text-xs font-mono font-semibold text-amber-300 hover:text-amber-100 flex items-center gap-1.5 transition" title="Room Options: Create, Share or Join Room">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span id="roomCodeDisplay">...</span>
+          </button>
+          <button id="headerCreateRoomBtn" type="button" class="px-2.5 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/35 border border-amber-400/40 text-amber-200 font-semibold text-xs flex items-center gap-1 transition" title="Create a Brand New Unique Room">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Create Room</span>
+          </button>
+          <button id="copyRoomLinkBtn" type="button" class="px-2.5 py-1 rounded-md bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-semibold text-xs flex items-center gap-1 shadow transition" title="Share Current Room Link">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span id="copyLinkBtnText">Share Link</span>
+          </button>
+          <button id="headerWhatsappBtn" type="button" class="ml-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1 shadow transition" title="Share Room Invite on WhatsApp">
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.03 14.69 2 12.04 2ZM12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.58 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19L7.55 18.83L4.43 19.65L5.26 16.61L5.06 16.29C4.24 14.98 3.8 13.47 3.8 11.91C3.81 7.37 7.5 3.67 12.05 3.67Z"/>
+            </svg>
+            <span class="hidden sm:inline">WhatsApp</span>
+          </button>
+        </div>
+
+        <!-- Simulate Co-Creators Button (for instant multi-user demo) -->
+        <button id="toggleSimCoopBtn" type="button" class="px-2.5 py-1.5 rounded-lg border border-amber-500/30 bg-amber-950/40 hover:bg-amber-900/50 text-amber-200 text-xs font-medium flex items-center gap-1.5 transition" title="Simulate friends drawing with you in real time">
+          <span id="simCoopIndicator" class="w-2 h-2 rounded-full bg-stone-500"></span>
+          <span class="hidden sm:inline">Demo Co-Op Bots</span>
+          <span class="sm:hidden">Co-Op</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button id="soundToggleBtn" type="button" class="p-1.5 rounded-lg border border-amber-500/30 bg-black/30 hover:bg-amber-950/60 text-amber-300 transition" title="Toggle Festive Sound Effects">
+          <svg id="soundOnIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+          </svg>
+          <svg id="soundOffIcon" class="w-4 h-4 hidden text-stone-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+          </svg>
+        </button>
+
+        <!-- Export PNG -->
+        <button id="downloadBtn" type="button" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white font-medium text-xs flex items-center gap-1 shadow transition" title="Download high-res Rangoli PNG">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          <span class="hidden md:inline">Save Photo</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE GRID -->
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-2 sm:p-4 grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 items-start">
+
+    <!-- LEFT PANEL: DRAWING TOOLS, SYMMETRY & COLORS (3 cols on lg) -->
+    <aside class="lg:col-span-3 flex flex-col gap-3 order-2 lg:order-1">
+      
+      <!-- 1. Drawing & Brush Tools -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+            </svg>
+            Drawing Tools
+          </h2>
+          <span id="activeModeBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Powder</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" data-tool="powder" class="tool-btn active rounded-xl p-2 border border-amber-500/25 bg-black/35 text-left flex items-center gap-2">
+            <span class="text-lg">✨</span>
+            <div>
+              <div class="text-xs font-semibold leading-tight">Rangoli Powder</div>
+              <div class="text-[10px] text-amber-200/60">Textured Silica</div>
+            </div>
+          </button>
+
+          <button type="button" data-tool="pencil" class="tool-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 text-left flex items-center gap-2">
+            <span class="text-lg">✏️</span>
+            <div>
+              <div class="text-xs font-semibold leading-tight">Chalk Pencil</div>
+              <div class="text-[10px] text-amber-200/60">Crisp Outlines</div>
+            </div>
+          </button>
+
+          <button type="button" data-tool="petals" class="tool-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 text-left flex items-center gap-2">
+            <span class="text-lg">🌼</span>
+            <div>
+              <div class="text-xs font-semibold leading-tight">Flower Petals</div>
+              <div class="text-[10px] text-amber-200/60">Phool Scatter</div>
+            </div>
+          </button>
+
+          <button type="button" data-tool="eraser" class="tool-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 text-left flex items-center gap-2">
+            <span class="text-lg">🧹</span>
+            <div>
+              <div class="text-xs font-semibold leading-tight">Eraser Brush</div>
+              <div class="text-[10px] text-amber-200/60">Clean Powder</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Brush Sliders -->
+        <div class="mt-3 pt-2.5 border-t border-amber-500/20 space-y-2">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-amber-200/80">Brush / Pinch Size</span>
+              <span id="brushSizeLabel" class="font-mono text-amber-300">16 px</span>
+            </div>
+            <input id="brushSizeInput" type="range" min="3" max="56" value="16" class="w-full h-1.5 bg-stone-800 rounded-lg cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-amber-200/80">Powder Flow / Density</span>
+              <span id="brushDensityLabel" class="font-mono text-amber-300">85%</span>
+            </div>
+            <input id="brushDensityInput" type="range" min="20" max="100" value="85" class="w-full h-1.5 bg-stone-800 rounded-lg cursor-pointer" />
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Festive Rangoli Color Palette -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2.5">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Pigment Colours</h2>
+          <div class="flex items-center gap-1.5">
+            <span id="selectedColorName" class="text-[11px] text-amber-200/80">Kumkum Red</span>
+            <label class="relative inline-flex items-center cursor-pointer" title="Custom Colour Picker">
+              <input id="customColorPicker" type="color" value="#ef4444" class="sr-only" />
+              <span class="w-5 h-5 rounded-full border border-amber-300/60 bg-gradient-to-tr from-rose-500 via-amber-400 to-cyan-400 flex items-center justify-center text-[10px] shadow">+</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="colorPaletteGrid" class="grid grid-cols-8 gap-2 py-1"></div>
+      </section>
+
+      <!-- 3. Mandala Symmetry & Stencil Guides -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Mandala Symmetry</h2>
+          <label class="flex items-center gap-1.5 text-xs text-amber-200/90 cursor-pointer">
+            <input id="mirrorToggle" type="checkbox" class="rounded accent-amber-500" />
+            <span>Mirror Spokes</span>
+          </label>
+        </div>
+
+        <div id="symmetryBtns" class="grid grid-cols-6 gap-1 mb-3">
+          <button type="button" data-sym="1" class="sym-btn tool-btn active rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35" title="100% Hand-Drawn Freehand">1x</button>
+          <button type="button" data-sym="4" class="sym-btn tool-btn rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35">4x</button>
+          <button type="button" data-sym="6" class="sym-btn tool-btn rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35">6x</button>
+          <button type="button" data-sym="8" class="sym-btn tool-btn rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35">8x</button>
+          <button type="button" data-sym="12" class="sym-btn tool-btn rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35">12x</button>
+          <button type="button" data-sym="16" class="sym-btn tool-btn rounded-lg py-1.5 text-xs font-semibold border border-amber-500/25 bg-black/35">16x</button>
+        </div>
+
+        <!-- Guide Overlay & Stencil Templates -->
+        <div class="space-y-2 pt-2 border-t border-amber-500/20">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-amber-200/80">Chalk Guide Grid</span>
+            <select id="guideSelect" class="bg-stone-900 border border-amber-500/30 rounded-lg px-2 py-1 text-xs text-amber-200 focus:outline-none">
+              <option value="none" selected>Hidden (Clean View)</option>
+              <option value="dots7">Kolam 7×7 Dot Grid</option>
+              <option value="dots11">Kolam 11×11 Dot Grid</option>
+              <option value="mandala">Mandala Rings + Spokes</option>
+            </select>
+          </div>
+
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-amber-200/80">Floor Surface</span>
+            <select id="floorSelect" class="bg-stone-900 border border-amber-500/30 rounded-lg px-2 py-1 text-xs text-amber-200 focus:outline-none">
+              <option value="stone" selected>Dark Courtyard Granite</option>
+              <option value="terracotta">Geru Red Terracotta</option>
+              <option value="marble">Royal Warm Sangamarmar</option>
+              <option value="wood">Polished Rosewood</option>
+            </select>
+          </div>
+
+          <div class="pt-1">
+            <div class="text-[11px] text-amber-300/80 mb-1.5 font-medium">Instant Starter Rangoli Base:</div>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" id="presetLotusBtn" class="px-2 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 text-[11px] font-medium text-amber-200 transition">🌸 Kamal</button>
+              <button type="button" id="presetStarBtn" class="px-2 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 text-[11px] font-medium text-amber-200 transition">✴️ Chakra</button>
+              <button type="button" id="presetKolamBtn" class="px-2 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 text-[11px] font-medium text-amber-200 transition">💠 Galicha</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- CENTER STAGE: INTERACTIVE MULTI-LAYER RANGOLI CANVAS (6 cols on lg) -->
+    <section class="lg:col-span-6 flex flex-col items-center order-1 lg:order-2">
+      
+      <!-- Quick Canvas Action Bar -->
+      <div class="w-full max-w-[680px] glass-panel rounded-xl px-3 py-2 mb-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5">
+          <button id="undoBtn" type="button" class="px-2.5 py-1 rounded-lg bg-stone-800/80 hover:bg-stone-700 border border-amber-500/25 text-xs text-amber-200 flex items-center gap-1 transition" title="Undo Last Stroke">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+            <span>Undo</span>
+          </button>
+          <button id="clearDrawingBtn" type="button" class="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/30 text-xs text-rose-200 flex items-center gap-1 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>Clear All</span>
+          </button>
+        </div>
+
+        <!-- Ambient Night Glow Slider -->
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-amber-300 flex items-center gap-1" title="Dim courtyard lights to see Diya illumination">
+            <span>🌙</span>
+            <span class="hidden sm:inline">Evening Glow</span>
+          </span>
+          <input id="nightGlowSlider" type="range" min="0" max="85" value="30" class="w-20 sm:w-28 h-1.5 bg-stone-800 rounded-lg cursor-pointer" />
+        </div>
+      </div>
+
+      <!-- Canvas Stage Container -->
+      <div id="canvasStage" class="canvas-stage-wrapper relative w-full max-w-[680px] aspect-square rounded-3xl overflow-hidden border-2 border-amber-500/35 touch-none select-none">
+        <!-- Layer 1: Realistic Floor Texture -->
+        <canvas id="floorCanvas" width="800" height="800" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+        <!-- Layer 2: Chalk Guide Grid -->
+        <canvas id="guideCanvas" width="800" height="800" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+        <!-- Layer 3: Rangoli Powder & Chalk Strokes -->
+        <canvas id="drawCanvas" width="800" height="800" class="absolute inset-0 w-full h-full"></canvas>
+        <!-- Layer 4: Animated Diwali Items (Diyas, Candles, Flowers, Sparklers, Night Lighting & Remote Cursors) -->
+        <canvas id="itemsCanvas" width="800" height="800" class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+
+        <!-- Floating Contextual Instruction Pill -->
+        <div id="canvasHintBanner" class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-full bg-black/75 border border-amber-400/40 text-[11px] text-amber-200 pointer-events-none whitespace-nowrap shadow-lg">
+          Hand-Drawn Mode (1x): Draw freely anywhere on the courtyard &bull; Click any Diya on the right to place it
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: DIWALI PROPS (DIYAS, CANDLES, GARLANDS) & SELECTED ITEM CONTROLS (3 cols on lg) -->
+    <aside class="lg:col-span-3 flex flex-col gap-3 order-3">
+      
+      <!-- Diwali Props Tray -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-1.5">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <span>🪔</span>
+            Diwali Decor &amp; Diyas
+          </h2>
+          <span class="text-[10px] text-amber-200/60">Click to Place / Drag</span>
+        </div>
+        <p class="text-[11px] text-amber-100/70 mb-2.5">
+          Select an item below then tap anywhere on your Rangoli to place it, or drag placed items directly on the canvas.
+        </p>
+
+        <div id="diwaliPropsGrid" class="grid grid-cols-2 gap-1.5">
+          <!-- Populated dynamically or static buttons -->
+          <button type="button" data-prop="clay_diya" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🪔</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Mitti Diya</div>
+              <div class="text-[10px] text-amber-300/60">Flickering Flame</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="brass_diya" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🔱</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Brass Lamp</div>
+              <div class="text-[10px] text-amber-300/60">5-Wick Pancharti</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="lotus_diya" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🪷</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Kamal Deep</div>
+              <div class="text-[10px] text-amber-300/60">Lotus Wax Lamp</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="candle" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🕯️</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Pillar Candle</div>
+              <div class="text-[10px] text-amber-300/60">Warm Wax Glow</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="tealight" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🌟</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Glitter Tealight</div>
+              <div class="text-[10px] text-amber-300/60">Golden Holder</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="marigold_ring" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🏵️</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Genda Mala</div>
+              <div class="text-[10px] text-amber-300/60">Marigold Wreath</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="charan" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">👣</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Lakshmi Charan</div>
+              <div class="text-[10px] text-amber-300/60">Sacred Footprints</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="kalash" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🏺</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Mangal Kalash</div>
+              <div class="text-[10px] text-amber-300/60">Coconut &amp; Leaves</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="sparkler" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🎇</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Phuljhari</div>
+              <div class="text-[10px] text-amber-300/60">Live Sparkler</div>
+            </div>
+          </button>
+
+          <button type="button" data-prop="rose_bowl" class="prop-btn rounded-xl p-2 border border-amber-500/25 bg-black/35 hover:bg-amber-950/40 text-left flex items-center gap-2 transition">
+            <span class="text-xl">🌺</span>
+            <div>
+              <div class="text-xs font-semibold text-amber-100">Urli Float Bowl</div>
+              <div class="text-[10px] text-amber-300/60">Petals &amp; Diyas</div>
+            </div>
+          </button>
+        </div>
+
+        <!-- Quick Ring Placement Button -->
+        <div class="mt-3 pt-2.5 border-t border-amber-500/20 flex flex-col gap-1.5">
+          <button id="autoPlaceDiyaRingBtn" type="button" class="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-500/25 to-orange-500/25 hover:from-amber-500/40 hover:to-orange-500/40 border border-amber-400/40 text-xs font-semibold text-amber-200 flex items-center justify-center gap-1.5 transition">
+            <span>✨</span>
+            <span>Place 8 Glowing Diyas in Circle</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Selected Item Inspector -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Selected Prop Controls</h2>
+          <span id="selectedPropLabel" class="text-[11px] text-amber-200/70">None selected</span>
+        </div>
+
+        <div id="propInspectorControls" class="space-y-2.5 opacity-50 pointer-events-none transition">
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-amber-200/80">Item Scale</span>
+              <span id="propScaleLabel" class="font-mono text-amber-300">100%</span>
+            </div>
+            <input id="propScaleInput" type="range" min="50" max="200" value="100" class="w-full h-1.5 bg-stone-800 rounded-lg cursor-pointer" />
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-amber-200/80">Rotation</span>
+              <span id="propRotateLabel" class="font-mono text-amber-300">0°</span>
+            </div>
+            <input id="propRotateInput" type="range" min="0" max="360" value="0" class="w-full h-1.5 bg-stone-800 rounded-lg cursor-pointer" />
+          </div>
+
+          <div class="flex gap-1.5 pt-1">
+            <button id="duplicatePropBtn" type="button" class="flex-1 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/30 text-xs font-medium text-amber-200 transition">
+              Duplicate
+            </button>
+            <button id="deletePropBtn" type="button" class="flex-1 py-1.5 rounded-lg bg-rose-950/70 hover:bg-rose-900 border border-rose-500/40 text-xs font-medium text-rose-200 transition">
+              Remove Item
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Room Activity Log & Your Artist Name -->
+      <section class="glass-panel rounded-2xl p-3.5">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400">Your Artist Profile</h2>
+          <span class="text-[10px] text-emerald-400">Synced P2P + Local</span>
+        </div>
+        <div class="flex gap-1.5 mb-2.5">
+          <input id="artistNameInput" type="text" maxlength="18" value="Meera" placeholder="Your Name" class="flex-1 bg-stone-900/90 border border-amber-500/30 rounded-lg px-2.5 py-1 text-xs text-amber-100 focus:outline-none focus:border-amber-400" />
+          <button id="saveNameBtn" type="button" class="px-2.5 py-1 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/40 text-xs font-medium text-amber-200 transition">
+            Update
+          </button>
+        </div>
+        <div id="activityFeed" class="text-[11px] text-amber-200/75 space-y-1 max-h-24 overflow-y-auto bg-black/30 rounded-lg p-2 border border-amber-500/15"></div>
+      </section>
+
+    </aside>
+  </main>
+
+  <!-- ROOM SHARE & JOIN MODAL -->
+  <div id="roomModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="glass-panel rounded-2xl max-w-md w-full p-5 border border-amber-400/40 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-serif-festive text-lg font-bold text-amber-200 flex items-center gap-2">
+          <span>🪔</span>
+          <span>Collaborate &amp; Share Room</span>
+        </h3>
+        <button id="closeRoomModalBtn" type="button" class="text-amber-300/70 hover:text-amber-100 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <p class="text-xs text-amber-100/80 mb-3 leading-relaxed">
+        Anyone with your room link or room code can join to draw Rangoli powder and place glowing Diyas together in real time (supports cross-device WebRTC via PeerJS &amp; multi-tab sync).
+      </p>
+
+      <!-- Create Room vs Share Room Bar -->
+      <div class="mb-3.5 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-amber-300/80 font-semibold">Active Unique Room ID</div>
+          <div id="modalActiveRoomId" class="text-sm font-mono font-bold text-amber-200">...</div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="modalCreateNewRoomBtn" type="button" class="px-3 py-1.5 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-amber-100 font-semibold text-xs flex items-center gap-1 transition">
+            <span>✨ Create New Room</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Share Current Room Link Box -->
+      <div class="mb-3">
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-amber-400 mb-1">Share Room Link</label>
+        <div class="flex gap-1.5">
+          <input id="shareUrlInput" type="text" readonly class="flex-1 bg-stone-950 border border-amber-500/35 rounded-lg px-2.5 py-2 text-xs text-amber-200 font-mono select-all focus:outline-none" />
+          <button id="modalCopyUrlBtn" type="button" class="px-3.5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-semibold text-xs transition whitespace-nowrap">
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <!-- WhatsApp Direct Share & Invite Message Box -->
+      <div class="mb-3 p-3 rounded-xl bg-emerald-950/35 border border-emerald-500/35 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-300">📲 Share Invite on WhatsApp</span>
+          <span class="text-[10px] font-mono text-emerald-200/80" id="modalRoomCodeBadge">Room: DIWALI-108</span>
+        </div>
+        <textarea id="whatsappInviteText" rows="2" readonly class="w-full bg-stone-950/90 border border-emerald-500/30 rounded-lg p-2 text-[11px] text-amber-100 select-all focus:outline-none resize-none"></textarea>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="copyWhatsappMsgBtn" type="button" class="py-2 px-3 rounded-lg bg-stone-800 hover:bg-stone-700 border border-emerald-400/40 text-emerald-200 font-semibold text-xs flex items-center justify-center gap-1.5 transition">
+            <span>📋 Copy Invite Text</span>
+          </button>
+          <a id="whatsappDirectLink" href="https://api.whatsapp.com/send?text=Join%20my%20Diwali%20Rangoli" target="_blank" rel="noopener noreferrer" class="py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow transition text-center no-underline">
+            <span>💬 Send on WhatsApp</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Join Another Room Code -->
+      <div class="pt-2.5 border-t border-amber-500/20">
+        <label class="block text-[11px] font-semibold uppercase tracking-wider text-amber-400 mb-1">Switch or Join Friend's Room Code</label>
+        <div class="flex gap-1.5">
+          <input id="joinRoomInput" type="text" maxlength="20" placeholder="e.g. DIWALI-2026" class="flex-1 bg-stone-950 border border-amber-500/35 rounded-lg px-2.5 py-2 text-xs text-amber-100 font-mono uppercase focus:outline-none focus:border-amber-400" />
+          <button id="joinRoomConfirmBtn" type="button" class="px-3.5 py-2 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-xs font-semibold text-amber-200 transition">
+            Join Room
+          </button>
+          <button id="randomRoomBtn" type="button" class="px-2.5 py-2 rounded-lg bg-stone-800 hover:bg-stone-700 border border-amber-500/25 text-xs text-amber-200 transition" title="Generate New Room">
+            New
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toastBanner" class="fixed bottom-5 right-5 z-50 hidden items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-stone-950 font-semibold text-xs shadow-2xl transition-all">
+    <span id="toastMessage">Room link copied to clipboard!</span>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ==========================================
+      // 1. TRADITIONAL FESTIVE PIGMENT PALETTE
+      // ==========================================
+      const RANGOLI_COLORS = [
+        { name: 'Kumkum Red', hex: '#ef4444' },
+        { name: 'Haldi Yellow', hex: '#facc15' },
+        { name: 'Marigold Orange', hex: '#f97316' },
+        { name: 'Gulal Magenta', hex: '#ec4899' },
+        { name: 'Lotus Pink', hex: '#f472b6' },
+        { name: 'Peacock Blue', hex: '#0ea5e9' },
+        { name: 'Royal Indigo', hex: '#6366f1' },
+        { name: 'Parrot Green', hex: '#22c55e' },
+        { name: 'Emerald Leaf', hex: '#10b981' },
+        { name: 'Turquoise', hex: '#14b8a6' },
+        { name: 'Amethyst Violet', hex: '#a855f7' },
+        { name: 'Coral Sindoor', hex: '#fb7185' },
+        { name: 'Rice Flour White', hex: '#fffbeb' },
+        { name: 'Swarna Gold', hex: '#f59e0b' },
+        { name: 'Chandi Silver', hex: '#cbd5e1' },
+        { name: 'Deep Maroon', hex: '#991b1b' }
+      ];
+
+      // ==========================================
+      // 2. APPLICATION STATE
+      // ==========================================
+      const state = {
+        roomCode: 'DIWALI-108',
+        myId: 'usr_' + Math.random().toString(36).substring(2, 9),
+        myName: 'Aarav',
+        myColor: '#f59e0b',
+        tool: 'powder',         // 'powder' | 'pencil' | 'petals' | 'eraser'
+        placingPropType: null,  // when non-null, clicking canvas places prop
+        color: '#ef4444',
+        colorName: 'Kumkum Red',
+        brushSize: 16,
+        brushDensity: 85,
+        symmetry: 1,
+        mirror: false,
+        guideMode: 'none',
+        floorType: 'stone',
+        nightGlow: 30,
+        soundEnabled: true,
+        isDrawing: false,
+        lastPt: null,
+        props: [],              // Placed Diwali items: { id, type, x, y, scale, rotation }
+        selectedPropId: null,
+        draggingPropId: null,
+        dragOffsetX: 0,
+        dragOffsetY: 0,
+        undoStack: [],          // ImageData snapshots of drawCanvas
+        peers: {},              // Remote participants { id: { name, color, x, y, lastSeen } }
+        simCoopActive: false,
+        simBots: [],
+        particles: []           // Floating sparkles / smoke particles
+      };
+
+      // Pick random festive artist default name
+      const FESTIVE_NAMES = ['Aarav', 'Diya', 'Kavya', 'Rohan', 'Ananya', 'Vivaan', 'Meera', 'Ishaan'];
+      state.myName = FESTIVE_NAMES[Math.floor(Math.random() * FESTIVE_NAMES.length)];
+
+      // ==========================================
+      // 3. DOM ELEMENTS & CANVASES
+      // ==========================================
+      const floorCanvas = document.getElementById('floorCanvas');
+      const guideCanvas = document.getElementById('guideCanvas');
+      const drawCanvas = document.getElementById('drawCanvas');
+      const itemsCanvas = document.getElementById('itemsCanvas');
+
+      const floorCtx = floorCanvas.getContext('2d');
+      const guideCtx = guideCanvas.getContext('2d');
+      const drawCtx = drawCanvas.getContext('2d', { willReadFrequently: true });
+      const itemsCtx = itemsCanvas.getContext('2d');
+
+      const W = 800;
+      const H = 800;
+      const CX = W / 2;
+      const CY = H / 2;
+
+      // ==========================================
+      // 4. WEB AUDIO SYNTHESIZER (NO EXTERNAL FILES)
+      // ==========================================
+      let audioCtx = null;
+      function ensureAudio() {
+        if (!state.soundEnabled) return null;
+        if (!audioCtx) {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (AC) audioCtx = new AC();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        return audioCtx;
+      }
+
+      function playBellChime(freqBase = 587.33) {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        [1, 1.5, 2].forEach((mult, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = idx === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(freqBase * mult, now);
+          gain.gain.setValueAtTime(0.08 / (idx + 1), now);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.9 + idx * 0.2);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + idx * 0.04);
+          osc.stop(now + 1.2 + idx * 0.2);
+        });
+      }
+
+      function playPopSound() {
+        const ctx = ensureAudio();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(420, now);
+        osc.frequency.exponentialRampToValueAtTime(780, now + 0.14);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.17);
+      }
+
+      // ==========================================
+      // 5. FLOOR TEXTURE & GUIDE RENDERING
+      // ==========================================
+      function renderFloorTexture() {
+        const palettes = {
+          stone: { base: '#1a1615',c1: '#26201e', c2: '#110e0d', speck: 'rgba(255,245,230,0.04)' },
+          terracotta: { base: '#4a1c14', c1: '#5c241a', c2: '#38130d', speck: 'rgba(253,186,116,0.05)' },
+          marble: { base: '#2c2520', c1: '#3a312b', c2: '#201a16', speck: 'rgba(254,243,199,0.06)' },
+          wood: { base: '#28160d', c1: '#361e12', c2: '#1b0e07', speck: 'rgba(245,158,11,0.04)' }
+        };
+        const pal = palettes[state.floorType] || palettes.stone;
+
+        // Radial vignette base
+        const grad = floorCtx.createRadialGradient(CX, CY, 40, CX, CY, 520);
+        grad.addColorStop(0, pal.c1);
+        grad.addColorStop(0.65, pal.base);
+        grad.addColorStop(1, pal.c2);
+        floorCtx.fillStyle = grad;
+        floorCtx.fillRect(0, 0, W, H);
+
+        // Organic courtyard stone grain
+        for (let i = 0; i < 6500; i++) {
+          const x = (i * 97) % W + (Math.sin(i) * 7);
+          const y = (i * 53) % H + (Math.cos(i) * 7);
+          const r = (i % 3) + 0.6;
+          floorCtx.fillStyle = i % 2 === 0 ? pal.speck : 'rgba(0,0,0,0.14)';
+          floorCtx.fillRect(x, y, r, r);
+        }
+
+        // Subtle traditional courtyard border frame
+        floorCtx.strokeStyle = 'rgba(245, 158, 11, 0.14)';
+        floorCtx.lineWidth = 2;
+        floorCtx.strokeRect(18, 18, W - 36, H - 36);
+      }
+
+      function renderGuideOverlay() {
+        guideCtx.clearRect(0, 0, W, H);
+        if (state.guideMode === 'none') return;
+
+        guideCtx.save();
+        guideCtx.strokeStyle = 'rgba(254, 243, 199, 0.13)';
+        guideCtx.fillStyle = 'rgba(254, 243, 199, 0.25)';
+        guideCtx.lineWidth = 1;
+
+        if (state.guideMode === 'mandala') {
+          const radii = [70, 140, 210, 280, 345];
+          radii.forEach(r => {
+            guideCtx.beginPath();
+            guideCtx.setLineDash([4, 6]);
+            guideCtx.arc(CX, CY, r, 0, Math.PI * 2);
+            guideCtx.stroke();
+          });
+
+          const spokes = Math.max(state.symmetry, 8);
+          guideCtx.setLineDash([3, 7]);
+          for (let i = 0; i < spokes; i++) {
+            const angle = (i * Math.PI * 2) / spokes;
+            guideCtx.beginPath();
+            guideCtx.moveTo(CX, CY);
+            guideCtx.lineTo(CX + Math.cos(angle) * 355, CY + Math.sin(angle) * 355);
+            guideCtx.stroke();
+          }
+        } else if (state.guideMode === 'dots7' || state.guideMode === 'dots11') {
+          const count = state.guideMode === 'dots7' ? 7 : 11;
+          const span = 520;
+          const start = CX - span / 2;
+          const step = span / (count - 1);
+          for (let r = 0; r < count; r++) {
+            for (let c = 0; c < count; c++) {
+              guideCtx.beginPath();
+              guideCtx.arc(start + c * step, start + r * step, 2.5, 0, Math.PI * 2);
+              guideCtx.fill();
+            }
+          }
+        }
+        guideCtx.restore();
+      }
+
+      // ==========================================
+      // 6. REALISTIC RANGOLI POWDER, CHALK & PETAL ENGINE
+      // ==========================================
+      function hexToRgb(hex) {
+        const clean = hex.replace('#', '');
+        const num = parseInt(clean.length === 3 ? clean.split('').map(c => c + c).join('') : clean, 16);
+        return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+      }
+
+      function jitterColor(hex, variance = 22) {
+        const { r, g, b } = hexToRgb(hex);
+        const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+        const delta = (Math.random() - 0.5) * variance * 2;
+        return `rgb(${clamp(r + delta)}, ${clamp(g + delta)}, ${clamp(b + delta)})`;
+      }
+
+      function drawSinglePointStamp(ctx, x, y, tool, color, size, density) {
+        if (tool === 'eraser') {
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-out';
+          const grad = ctx.createRadialGradient(x, y, size * 0.1, x, y, size);
+          grad.addColorStop(0, 'rgba(0,0,0,1)');
+          grad.addColorStop(0.7, 'rgba(0,0,0,0.85)');
+          grad.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          return;
+        }
+
+        if (tool === 'pencil') {
+          // Crisp chalk cone line with subtle silica edge
+          ctx.save();
+          const radius = Math.max(2, size * 0.36);
+          ctx.fillStyle = color;
+          ctx.beginPath();
+          ctx.arc(x, y, radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Chalk grain specks around edge
+          const specks = Math.ceil(radius * 2.2);
+          for (let i = 0; i < specks; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const dist = radius * (0.6 + Math.random() * 0.65);
+            ctx.fillStyle = jitterColor(color, 18);
+            ctx.fillRect(x + Math.cos(ang) * dist, y + Math.sin(ang) * dist, 1.5, 1.5);
+          }
+          ctx.restore();
+          return;
+        }
+
+        if (tool === 'petals') {
+          // Scatter realistic layered flower petals
+          if (Math.random() > 0.42) return;
+          ctx.save();
+          const px = x + (Math.random() - 0.5) * size * 0.6;
+          const py = y + (Math.random() - 0.5) * size * 0.6;
+          const angle = Math.random() * Math.PI * 2;
+          const pLen = Math.max(5, size * 0.55);
+          const pWid = pLen * 0.52;
+
+          ctx.translate(px, py);
+          ctx.rotate(angle);
+
+          // Soft shadow under petal
+          ctx.fillStyle = 'rgba(0,0,0,0.28)';
+          ctx.beginPath();
+          ctx.ellipse(1.5, 2, pLen, pWid, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Petal body
+          ctx.fillStyle = jitterColor(color, 25);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, pLen, pWid, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Petal highlight vein
+          ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          ctx.moveTo(-pLen * 0.5, 0);
+          ctx.lineTo(pLen * 0.5, 0);
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+
+        // Default: Realistic Granular Rangoli Powder
+        ctx.save();
+        const { r, g, b } = hexToRgb(color);
+        // Soft core powder cushion
+        const coreGrad = ctx.createRadialGradient(x, y, 0, x, y, size);
+        coreGrad.addColorStop(0, `rgba(${r},${g},${b},${0.26 * (density / 100)})`);
+        coreGrad.addColorStop(0.65, `rgba(${r},${g},${b},${0.12 * (density / 100)})`);
+        coreGrad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Individual coarse quartz / rice powder grains
+        const grainCount = Math.floor((size * size * 0.22) * (density / 100));
+        for (let i = 0; i < grainCount; i++) {
+          // Gaussian-like radial distribution so center is denser
+          const u = Math.random() * Math.random();
+          const dist = u * size * 1.08;
+          const ang = Math.random() * Math.PI * 2;
+          const gx = x + Math.cos(ang) * dist;
+          const gy = y + Math.sin(ang) * dist;
+          const grainSize = Math.random() < 0.18 ? 2.1 : 1.35;
+
+          // Occasional white quartz sparkle grain
+          if (Math.random() < 0.06) {
+            ctx.fillStyle = 'rgba(255, 253, 240, 0.85)';
+          } else {
+            ctx.fillStyle = jitterColor(color, 26);
+          }
+          ctx.fillRect(gx, gy, grainSize, grainSize);
+        }
+        ctx.restore();
+      }
+
+      function drawSymmetricSegment(p0, p1, strokeOpts) {
+        hasLocalCanvasChanges = true;
+        const { tool, color, size, density, symmetry, mirror } = strokeOpts;
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const dist = Math.hypot(dx, dy);
+        const stepSize = tool === 'pencil' ? Math.max(1.5, size * 0.12) : Math.max(2.5, size * 0.22);
+        const steps = Math.max(1, Math.ceil(dist / stepSize));
+
+        for (let s = 0; s <= steps; s++) {
+          const t = steps === 0 ? 0 : s / steps;
+          const x = p0.x + dx * t;
+          const y = p0.y + dy * t;
+
+          const symCount = Math.max(1, symmetry || 1);
+          if (symCount === 1 && !mirror) {
+            drawSinglePointStamp(drawCtx, x, y, tool, color, size, density);
+          } else {
+            const relX = x - CX;
+            const relY = y - CY;
+            const radius = Math.hypot(relX, relY);
+            const baseAngle = Math.atan2(relY, relX);
+
+            for (let k = 0; k < symCount; k++) {
+              const rot = (k * Math.PI * 2) / symCount;
+              const a1 = baseAngle + rot;
+              const sx = CX + Math.cos(a1) * radius;
+              const sy = CY + Math.sin(a1) * radius;
+              drawSinglePointStamp(drawCtx, sx, sy, tool, color, size, density);
+
+              if (mirror) {
+                const a2 = -baseAngle + rot;
+                const mx = CX + Math.cos(a2) * radius;
+                const my = CY + Math.sin(a2) * radius;
+                drawSinglePointStamp(drawCtx, mx, my, tool, color, size, density);
+              }
+            }
+          }
+        }
+      }
+
+      // ==========================================
+      // 7. STARTER RANGOLI TEMPLATES
+      // ==========================================
+      function saveUndoSnapshot() {
+        try {
+          if (state.undoStack.length >= 15) state.undoStack.shift();
+          state.undoStack.push(drawCtx.getImageData(0, 0, W, H));
+        } catch (e) {}
+      }
+
+      function drawStarterRangoli(presetName, broadcast = true) {
+        saveUndoSnapshot();
+        drawCtx.clearRect(0, 0, W, H);
+
+        if (presetName === 'lotus') {
+          // Outer marigold & emerald rings
+          const rings = [
+            { r: 300, color: '#f97316', size: 18, sym: 16 },
+            { r: 255, color: '#facc15', size: 15, sym: 16 },
+            { r: 200, color: '#10b981', size: 14, sym: 12 },
+            { r: 120, color: '#ec4899', size: 16, sym: 8 }
+          ];
+          rings.forEach(ring => {
+            for (let t = 0; t <= 24; t++) {
+              const ang = (t / 24) * (Math.PI / ring.sym);
+              const rWave = ring.r + Math.sin((t / 24) * Math.PI) * 34;
+              const x = CX + Math.cos(ang) * rWave;
+              const y = CY + Math.sin(ang) * rWave;
+              drawSymmetricSegment({ x, y }, { x: x + 0.5, y: y + 0.5 }, {
+                tool: 'powder', color: ring.color, size: ring.size, density: 90, symmetry: ring.sym, mirror: true
+              });
+            }
+          });
+          // Center white & haldi bindu
+          drawSymmetricSegment({ x: CX, y: CY }, { x: CX + 1, y: CY + 1 }, {
+            tool: 'powder', color: '#facc15', size: 32, density: 95, symmetry: 1, mirror: false
+          });
+          drawSymmetricSegment({ x: CX, y: CY }, { x: CX + 1, y: CY + 1 }, {
+            tool: 'powder', color: '#ef4444', size: 16, density: 95, symmetry: 1, mirror: false
+          });
+        } else if (presetName === 'chakra') {
+          const colors = ['#0ea5e9', '#6366f1', '#ec4899', '#facc15', '#fffbeb'];
+          colors.forEach((col, idx) => {
+            const baseR = 290 - idx * 52;
+            for (let s = 0; s <= 20; s++) {
+              const ang = (s / 20) * (Math.PI / 6);
+              const r = baseR + Math.cos((s / 20) * Math.PI * 2) * 24;
+              const pt = { x: CX + Math.cos(ang) * r, y: CY + Math.sin(ang) * r };
+              drawSymmetricSegment(pt, pt, {
+                tool: idx === 4 ? 'pencil' : 'powder',
+                color: col,
+                size: idx === 4 ? 10 : 16,
+                density: 88,
+                symmetry: 12,
+                mirror: true
+              });
+            }
+          });
+        } else if (presetName === 'kolam') {
+          // Traditional geometric Rice Flour & Kumkum Kolam
+          const steps = 36;
+          for (let s = 0; s <= steps; s++) {
+            const t = (s / steps) * Math.PI * 2;
+            const r = 110 + 175 * Math.cos(2 * t);
+            const pt = { x: CX + Math.cos(t) * r, y: CY + Math.sin(t) * r };
+            drawSymmetricSegment(pt, pt, {
+              tool: 'powder', color: '#ef4444', size: 20, density: 85, symmetry: 4, mirror: true
+            });
+            drawSymmetricSegment(pt, pt, {
+              tool: 'pencil', color: '#fffbeb', size: 10, density: 95, symmetry: 4, mirror: true
+            });
+          }
+        }
+
+        if (broadcast) {
+          broadcastEvent({ type: 'preset', presetName });
+          logActivity(`${state.myName} applied the ${presetName.toUpperCase()} Rangoli base`);
+        }
+        playBellChime(523.25);
+      }
+
+      // ==========================================
+      // 8. DIWALI PROPS (DIYAS, CANDLES, GARLANDS, SPARKLERS)
+      // ==========================================
+      function addProp(type, x, y, scale = 1, rotation = 0, id = null, broadcast = true) {
+        const newProp = {
+          id: id || ('prop_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
+          type,
+          x,
+          y,
+          scale,
+          rotation
+        };
+        state.props.push(newProp);
+        selectProp(newProp.id);
+        playPopSound();
+
+        // Spawn golden celebratory particles
+        for (let i = 0; i < 14; i++) {
+          state.particles.push({
+            x,
+            y,
+            vx: (Math.random() - 0.5) * 2.6,
+            vy: -Math.random() * 2.5 - 0.5,
+            alpha: 1,
+            color: i % 2 === 0 ? '#fde047' : '#fb923c',
+            size: 2 + Math.random() * 2.5
+          });
+        }
+
+        if (broadcast) {
+          broadcastEvent({ type: 'prop_add', prop: newProp });
+          logActivity(`${state.myName} placed a ${formatPropName(type)}`);
+        }
+        return newProp;
+      }
+
+      function formatPropName(type) {
+        const names = {
+          clay_diya: 'Mitti Diya',
+          brass_diya: 'Brass Lamp',
+          lotus_diya: 'Kamal Deep',
+          candle: 'Pillar Candle',
+          tealight: 'Glitter Tealight',
+          marigold_ring: 'Genda Mala',
+          charan: 'Lakshmi Charan',
+          kalash: 'Mangal Kalash',
+          sparkler: 'Phuljhari Sparkler',
+          rose_bowl: 'Urli Float Bowl'
+        };
+        return names[type] || 'Diwali Decor';
+      }
+
+      function selectProp(id) {
+        state.selectedPropId = id;
+        const prop = state.props.find(p => p.id === id);
+        const inspector = document.getElementById('propInspectorControls');
+        const label = document.getElementById('selectedPropLabel');
+        const scaleIn = document.getElementById('propScaleInput');
+        const rotIn = document.getElementById('propRotateInput');
+
+        if (prop) {
+          inspector.classList.remove('opacity-50', 'pointer-events-none');
+          label.textContent = formatPropName(prop.type);
+          scaleIn.value = Math.round(prop.scale * 100);
+          rotIn.value = Math.round(prop.rotation);
+          document.getElementById('propScaleLabel').textContent = Math.round(prop.scale * 100) + '%';
+          document.getElementById('propRotateLabel').textContent = Math.round(prop.rotation) + '°';
+        } else {
+          inspector.classList.add('opacity-50', 'pointer-events-none');
+          label.textContent = 'None selected';
+        }
+      }
+
+      function isLightBearingProp(type) {
+        return ['clay_diya', 'brass_diya', 'lotus_diya', 'candle', 'tealight', 'sparkler', 'rose_bowl'].includes(type);
+      }
+
+      function drawAnimatedFlame(ctx, fx, fy, time, scale = 1) {
+        const flickerX = Math.sin(time * 0.014 + fx) * 1.6;
+        const flickerY = Math.cos(time * 0.019 + fy) * 1.8;
+
+        ctx.save();
+        ctx.translate(fx, fy);
+        ctx.scale(scale, scale);
+
+        // Warm outer halo
+        const halo = ctx.createRadialGradient(0, -6, 1, 0, -6, 30);
+        halo.addColorStop(0, 'rgba(254, 240, 138, 0.75)');
+        halo.addColorStop(0.45, 'rgba(249, 115, 22, 0.35)');
+        halo.addColorStop(1, 'rgba(249, 115, 22, 0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(0, -6, 30, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer orange tear-drop flame
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.moveTo(0, 2);
+        ctx.quadraticCurveTo(-9, -6, flickerX, -22 + flickerY);
+        ctx.quadraticCurveTo(9, -6, 0, 2);
+        ctx.fill();
+
+        // Inner golden yellow flame
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.moveTo(0, 1);
+        ctx.quadraticCurveTo(-5.5, -5, flickerX * 0.6, -16 + flickerY * 0.7);
+        ctx.quadraticCurveTo(5.5, -5, 0, 1);
+        ctx.fill();
+
+        // White-hot wick tip
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, -3, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function renderSingleProp(ctx, prop, time) {
+        ctx.save();
+        ctx.translate(prop.x, prop.y);
+        ctx.scale(prop.scale, prop.scale);
+
+        // Rotate bowl/body, though flames stay upright or rotate naturally
+        ctx.save();
+        ctx.rotate((prop.rotation * Math.PI) / 180);
+
+        // Drop shadow on rangoli
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+        ctx.beginPath();
+        ctx.ellipse(3, 6, 28, 24, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (prop.type === 'clay_diya') {
+          // Terracotta clay bowl (teardrop spout pointing up)
+          const clayGrad = ctx.createRadialGradient(0, 4, 4, 0, 2, 28);
+          clayGrad.addColorStop(0, '#c2410c');
+          clayGrad.addColorStop(0.7, '#9a3412');
+          clayGrad.addColorStop(1, '#431407');
+          ctx.fillStyle = clayGrad;
+          ctx.beginPath();
+          ctx.moveTo(0, -30);
+          ctx.bezierCurveTo(28, -14, 30, 22, 0, 26);
+          ctx.bezierCurveTo(-30, 22, -28, -14, 0, -30);
+          ctx.fill();
+
+          // Decorative golden rim dots
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Warm ghee/oil pool inside
+          const oilGrad = ctx.createRadialGradient(0, 0, 2, 0, 2, 18);
+          oilGrad.addColorStop(0, '#f59e0b');
+          oilGrad.addColorStop(1, '#78350f');
+          ctx.fillStyle = oilGrad;
+          ctx.beginPath();
+          ctx.moveTo(0, -22);
+          ctx.bezierCurveTo(20, -10, 21, 16, 0, 19);
+          ctx.bezierCurveTo(-21, 16, -20, -10, 0, -22);
+          ctx.fill();
+
+          // Cotton wick
+          ctx.strokeStyle = '#fef3c7';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(0, -12);
+          ctx.lineTo(0, -26);
+          ctx.stroke();
+        } else if (prop.type === 'brass_diya') {
+          // Ornate 5-spout golden brass lamp
+          const brassGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 32);
+          brassGrad.addColorStop(0, '#fde047');
+          brassGrad.addColorStop(0.6, '#d97706');
+          brassGrad.addColorStop(1, '#78350f');
+          ctx.fillStyle = brassGrad;
+
+          for (let i = 0; i < 5; i++) {
+            ctx.save();
+            ctx.rotate((i * Math.PI * 2) / 5);
+            ctx.beginPath();
+            ctx.moveTo(0, -32);
+            ctx.quadraticCurveTo(16, -12, 0, 10);
+            ctx.quadraticCurveTo(-16, -12, 0, -32);
+            ctx.fill();
+            ctx.strokeStyle = '#fef08a';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.restore();
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#b45309';
+          ctx.fill();
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else if (prop.type === 'lotus_diya') {
+          // Layered pink lotus petals
+          for (let layer = 0; layer < 2; layer++) {
+            const count = 8;
+            const r = layer === 0 ? 28 : 20;
+            for (let i = 0; i < count; i++) {
+              ctx.save();
+              ctx.rotate((i * Math.PI * 2) / count + (layer * Math.PI) / count);
+              ctx.fillStyle = layer === 0 ? '#ec4899' : '#f472b6';
+              ctx.beginPath();
+              ctx.moveTo(0, -r);
+              ctx.quadraticCurveTo(11, -r * 0.3, 0, 6);
+              ctx.quadraticCurveTo(-11, -r * 0.3, 0, -r);
+              ctx.fill();
+              ctx.strokeStyle = '#fbcfe8';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.arc(0, 0, 10, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (prop.type === 'candle') {
+          // Cream & rose wax pillar candle
+          const waxGrad = ctx.createRadialGradient(-4, -4, 2, 0, 0, 22);
+          waxGrad.addColorStop(0, '#fffbeb');
+          waxGrad.addColorStop(0.6, '#fde68a');
+          waxGrad.addColorStop(1, '#d97706');
+          ctx.fillStyle = waxGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, 20, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fbbf24';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Melted inner pool
+          ctx.fillStyle = '#fef3c7';
+          ctx.beginPath();
+          ctx.arc(0, 0, 13, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (prop.type === 'tealight') {
+          // Glittering gold star holder
+          for (let i = 0; i < 8; i++) {
+            ctx.save();
+            ctx.rotate((i * Math.PI) / 4);
+            ctx.fillStyle = i % 2 === 0 ? '#f59e0b' : '#fbbf24';
+            ctx.fillRect(-16, -16, 32, 32);
+            ctx.restore();
+          }
+          ctx.fillStyle = '#fef08a';
+          ctx.beginPath();
+          ctx.arc(0, 0, 13, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (prop.type === 'marigold_ring') {
+          // Lush orange and yellow genda phool ring
+          const puffs = 14;
+          const ringR = 32;
+          for (let i = 0; i < puffs; i++) {
+            const ang = (i * Math.PI * 2) / puffs;
+            const mx = Math.cos(ang) * ringR;
+            const my = Math.sin(ang) * ringR;
+            ctx.fillStyle = i % 2 === 0 ? '#f97316' : '#facc15';
+            ctx.beginPath();
+            ctx.arc(mx, my, 9.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ea580c';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+        } else if (prop.type === 'charan') {
+          // Sacred red & gold Lakshmi footprints
+          [-10, 10].forEach((offsetX, side) => {
+            ctx.save();
+            ctx.translate(offsetX, side === 0 ? 2 : -2);
+            ctx.fillStyle = '#dc2626';
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 1.5;
+            // Sole
+            ctx.beginPath();
+            ctx.ellipse(0, 2, 6.5, 11, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Heel
+            ctx.beginPath();
+            ctx.arc(0, 14, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // 5 Toes
+            for (let t = 0; t < 5; t++) {
+              const tx = (t - 2) * 2.8 * (side === 0 ? 1 : -1);
+              const ty = -11 - (t === 0 ? 2 : 0);
+              ctx.beginPath();
+              ctx.arc(tx, ty, 1.8 - t * 0.15, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          });
+        } else if (prop.type === 'kalash') {
+          // Copper pot with mango leaves and coconut
+          for (let i = 0; i < 7; i++) {
+            ctx.save();
+            ctx.rotate((i * Math.PI * 2) / 7);
+            ctx.fillStyle = '#15803d';
+            ctx.beginPath();
+            ctx.ellipse(0, -24, 6, 14, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#4ade80';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.restore();
+          }
+          // Kalash rim
+          ctx.fillStyle = '#d97706';
+          ctx.beginPath();
+          ctx.arc(0, 0, 21, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // Coconut on top
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.arc(0, 0, 13, 0, Math.PI * 2);
+          ctx.fill();
+          // Swastika / Tilak dot
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, 0, 4, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (prop.type === 'rose_bowl') {
+          // Brass Urli water bowl with floating petals & candles
+          ctx.fillStyle = '#b45309';
+          ctx.beginPath();
+          ctx.arc(0, 0, 32, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = '#0c4a6e';
+          ctx.beginPath();
+          ctx.arc(0, 0, 26, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Floating rose petals
+          for (let i = 0; i < 9; i++) {
+            const a = i * 1.4;
+            ctx.fillStyle = i % 2 === 0 ? '#f43f5e' : '#fbbf24';
+            ctx.beginPath();
+            ctx.arc(Math.cos(a) * 14, Math.sin(a) * 14, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else if (prop.type === 'sparkler') {
+          // Metallic sparkler rod
+          ctx.strokeStyle = '#9ca3af';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(0, 24);
+          ctx.lineTo(0, -10);
+          ctx.stroke();
+        }
+
+        ctx.restore(); // End rotation for base
+
+        // Draw animated upright flames on light-bearing items
+        if (prop.type === 'clay_diya') {
+          const rad = ((prop.rotation - 90) * Math.PI) / 180;
+          const tipX = Math.cos(rad) * 24;
+          const tipY = Math.sin(rad) * 24;
+          drawAnimatedFlame(ctx, tipX, tipY, time, 1.05);
+        } else if (prop.type === 'brass_diya') {
+          for (let i = 0; i < 5; i++) {
+            const rad = ((prop.rotation - 90 + i * 72) * Math.PI) / 180;
+            drawAnimatedFlame(ctx, Math.cos(rad) * 26, Math.sin(rad) * 26, time + i * 200, 0.78);
+          }
+        } else if (prop.type === 'lotus_diya' || prop.type === 'candle' || prop.type === 'tealight' || prop.type === 'rose_bowl') {
+          drawAnimatedFlame(ctx, 0, 0, time, 1.0);
+        } else if (prop.type === 'sparkler') {
+          // High-energy crackling golden sparks
+          ctx.save();
+          for (let s = 0; s < 14; s++) {
+            const ang = Math.random() * Math.PI * 2;
+            const len = 8 + Math.random() * 26;
+            ctx.strokeStyle = s % 2 === 0 ? '#fef08a' : '#fb923c';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.moveTo(0, -8);
+            ctx.lineTo(Math.cos(ang) * len, -8 + Math.sin(ang) * len);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // Selection ring if currently selected
+        if (state.selectedPropId === prop.id) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.8;
+          ctx.setLineDash([5, 4]);
+          ctx.beginPath();
+          ctx.arc(0, 0, 38, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // 9. ANIMATION LOOP (NIGHT GLOW, DIYAS, REMOTE CURSORS)
+      // ==========================================
+      function animateStage(time) {
+        itemsCtx.clearRect(0, 0, W, H);
+
+        // 1. Evening / Night Ambient Darkness with Dynamic Warm Cutouts around Diyas!
+        if (state.nightGlow > 0) {
+          itemsCtx.save();
+          // Warm ambient glow pools under each lit Diya/Candle
+          state.props.forEach(p => {
+            if (!isLightBearingProp(p.type)) return;
+            const radius = (p.type === 'brass_diya' ? 175 : 130) * p.scale;
+            const flicker = Math.sin(time * 0.012 + p.x) * 6;
+            const glowGrad = itemsCtx.createRadialGradient(p.x, p.y, 4, p.x, p.y, radius + flicker);
+            const intensity = Math.min(0.55, (state.nightGlow / 100) * 0.65);
+            glowGrad.addColorStop(0, `rgba(253, 224, 71, ${intensity})`);
+            glowGrad.addColorStop(0.45, `rgba(249, 115, 22, ${intensity * 0.55})`);
+            glowGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+            itemsCtx.fillStyle = glowGrad;
+            itemsCtx.beginPath();
+            itemsCtx.arc(p.x, p.y, radius + flicker, 0, Math.PI * 2);
+            itemsCtx.fill();
+          });
+          itemsCtx.restore();
+        }
+
+        // 2. Render all placed Diwali Props
+        state.props.forEach(prop => {
+          renderSingleProp(itemsCtx, prop, time);
+        });
+
+        // 3. Update & render celebratory particles
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const pt = state.particles[i];
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.alpha -= 0.025;
+          if (pt.alpha <= 0) {
+            state.particles.splice(i, 1);
+            continue;
+          }
+          itemsCtx.save();
+          itemsCtx.globalAlpha = pt.alpha;
+          itemsCtx.fillStyle = pt.color;
+          itemsCtx.beginPath();
+          itemsCtx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+          itemsCtx.fill();
+          itemsCtx.restore();
+        }
+
+        // 4. Update Demo Co-Op Bots if enabled
+        if (state.simCoopActive) {
+          stepSimCoopBots(time);
+        }
+
+        // 5. Render Live Remote Participant Cursors
+        const now = Date.now();
+        Object.keys(state.peers).forEach(peerId => {
+          const peer = state.peers[peerId];
+          if (now - peer.lastSeen > 12000 && !peer.isBot) {
+            delete state.peers[peerId];
+            updateParticipantsUI();
+            return;
+          }
+          if (typeof peer.x === 'number' && typeof peer.y === 'number') {
+            itemsCtx.save();
+            itemsCtx.translate(peer.x, peer.y);
+
+            // Cursor ring
+            itemsCtx.fillStyle = peer.color || '#fbbf24';
+            itemsCtx.beginPath();
+            itemsCtx.arc(0, 0, 6, 0, Math.PI * 2);
+            itemsCtx.fill();
+            itemsCtx.strokeStyle = '#ffffff';
+            itemsCtx.lineWidth = 2;
+            itemsCtx.stroke();
+
+            // Artist Name Tag
+            const tag = peer.name || 'Friend';
+            itemsCtx.font = '600 12px Inter, sans-serif';
+            const tw = itemsCtx.measureText(tag).width;
+            itemsCtx.fillStyle = 'rgba(20, 12, 8, 0.88)';
+            itemsCtx.beginPath();
+            itemsCtx.roundRect(10, -10, tw + 14, 22, 6);
+            itemsCtx.fill();
+            itemsCtx.strokeStyle = peer.color || '#fbbf24';
+            itemsCtx.lineWidth = 1.2;
+            itemsCtx.stroke();
+
+            itemsCtx.fillStyle = '#fef3c7';
+            itemsCtx.fillText(tag, 17, 5);
+            itemsCtx.restore();
+          }
+        });
+
+        requestAnimationFrame(animateStage);
+      }
+
+      // ==========================================
+      // 10. POINTER & TOUCH INTERACTION ON CANVAS
+      // ==========================================
+      function getCanvasCoords(evt) {
+        const rect = drawCanvas.getBoundingClientRect();
+        const clientX = evt.touches && evt.touches[0] ? evt.touches[0].clientX : evt.clientX;
+        const clientY = evt.touches && evt.touches[0] ? evt.touches[0].clientY : evt.clientY;
+        return {
+          x: ((clientX - rect.left) / rect.width) * W,
+          y: ((clientY - rect.top) / rect.height) * H
+        };
+      }
+
+      function findPropAt(x, y) {
+        for (let i = state.props.length - 1; i >= 0; i--) {
+          const p = state.props[i];
+          const hitR = 34 * p.scale;
+          if (Math.hypot(x - p.x, y - p.y) <= hitR) {
+            return p;
+          }
+        }
+        return null;
+      }
+
+      function handlePointerDown(evt) {
+        if (evt.button !== undefined && evt.button !== 0) return;
+        evt.preventDefault();
+        ensureAudio();
+        const pt = getCanvasCoords(evt);
+
+        // 1. If user selected a Diwali prop from the right panel to place:
+        if (state.placingPropType) {
+          addProp(state.placingPropType, pt.x, pt.y, 1, 0, null, true);
+          // Clear active placement mode or allow another? Let's clear so they can drag or draw right away
+          setPlacingPropMode(null);
+          return;
+        }
+
+        // 2. Check if user clicked on an existing placed Diya/Prop to drag or adjust it:
+        const clickedProp = findPropAt(pt.x, pt.y);
+        if (clickedProp) {
+          selectProp(clickedProp.id);
+          state.draggingPropId = clickedProp.id;
+          state.dragOffsetX = pt.x - clickedProp.x;
+          state.dragOffsetY = pt.y - clickedProp.y;
+          return;
+        } else {
+          selectProp(null);
+        }
+
+        // 3. Otherwise start drawing with the active Rangoli tool:
+        saveUndoSnapshot();
+        state.isDrawing = true;
+        state.lastPt = pt;
+
+        const strokeOpts = {
+          tool: state.tool,
+          color: state.color,
+          size: state.brushSize,
+          density: state.brushDensity,
+          symmetry: state.symmetry,
+          mirror: state.mirror
+        };
+        drawSymmetricSegment(pt, pt, strokeOpts);
+        broadcastEvent({
+          type: 'stroke',
+          p0: pt,
+          p1: pt,
+          opts: strokeOpts,
+          senderId: state.myId,
+          senderName: state.myName,
+          senderColor: state.color
+        });
+      }
+
+      function handlePointerMove(evt) {
+        const pt = getCanvasCoords(evt);
+
+        // Broadcast cursor move throttled
+        broadcastCursorMove(pt.x, pt.y);
+
+        if (state.draggingPropId) {
+          evt.preventDefault();
+          const prop = state.props.find(p => p.id === state.draggingPropId);
+          if (prop) {
+            prop.x = Math.max(24, Math.min(W - 24, pt.x - state.dragOffsetX));
+            prop.y = Math.max(24, Math.min(H - 24, pt.y - state.dragOffsetY));
+            broadcastEvent({ type: 'prop_update', prop });
+          }
+          return;
+        }
+
+        if (!state.isDrawing || !state.lastPt) return;
+        evt.preventDefault();
+
+        const strokeOpts = {
+          tool: state.tool,
+          color: state.color,
+          size: state.brushSize,
+          density: state.brushDensity,
+          symmetry: state.symmetry,
+          mirror: state.mirror
+        };
+        drawSymmetricSegment(state.lastPt, pt, strokeOpts);
+        broadcastEvent({
+          type: 'stroke',
+          p0: state.lastPt,
+          p1: pt,
+          opts: strokeOpts,
+          senderId: state.myId,
+          senderName: state.myName,
+          senderColor: state.color
+        });
+        state.lastPt = pt;
+      }
+
+      function handlePointerUp() {
+        state.isDrawing = false;
+        state.lastPt = null;
+        state.draggingPropId = null;
+      }
+
+      // ==========================================
+      // 11. REAL-TIME MULTI-USER COLLABORATION ENGINE
+      //     (Cloud WebSocket MQTT Relay for 4G/5G Mobile + PeerJS WebRTC + BroadcastChannel)
+      // ==========================================
+      let bcChannel = null;
+      let mqttClient = null;
+      let mqttTopic = '';
+      let peerInstance = null;
+      let hostConn = null;
+      let clientConns = [];
+      let isRoomHost = false;
+      let lastCursorSent = 0;
+      let hasLocalCanvasChanges = false;
+      const seenMsgIds = new Set();
+
+      const usedRoomIds = new Set();
+      let isCreatingFreshRoom = false;
+
+      function generateUniqueRoomId() {
+        const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // unambiguous uppercase alphanumeric
+        let candidate = '';
+        do {
+          // Combine millisecond timestamp entropy in base36 with cryptographic random bytes
+          const timePart = (Date.now() % 1679616).toString(36).toUpperCase().padStart(4, 'X').slice(-4);
+          let randPart = '';
+          if (window.crypto && window.crypto.getRandomValues) {
+            const buf = new Uint8Array(6);
+            window.crypto.getRandomValues(buf);
+            for (let i = 0; i < 6; i++) {
+              randPart += alphabet[buf[i] % alphabet.length];
+            }
+          } else {
+            for (let i = 0; i < 6; i++) {
+              randPart += alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+          }
+          candidate = `UTSAV-${timePart}-${randPart}`;
+        } while (usedRoomIds.has(candidate));
+
+        usedRoomIds.add(candidate);
+        return candidate;
+      }
+
+      function getRoomFromUrl() {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('room')) {
+            const r = params.get('room').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+            if (r) {
+              usedRoomIds.add(r);
+              return r;
+            }
+          }
+          if (window.location.hash && window.location.hash.includes('room=')) {
+            const r = window.location.hash.split('room=')[1].split('&')[0].toUpperCase().replace(/[^A-Z0-9-]/g, '');
+            if (r) {
+              usedRoomIds.add(r);
+              return r;
+            }
+          }
+        } catch (e) {}
+        // No room in URL: create a brand-new unique room ID so no two separate rooms ever share an ID
+        isCreatingFreshRoom = true;
+        return generateUniqueRoomId();
+      }
+
+      function getShareableRoomUrl() {
+        try {
+          const rawHref = window.location.href || '';
+          const isLocalOrBlank = !rawHref || rawHref.startsWith('about:') || rawHref.startsWith('blob:') || rawHref.startsWith('data:');
+          const base = isLocalOrBlank
+            ? (window.location.origin && window.location.origin !== 'null' ? window.location.origin + window.location.pathname : 'https://utsav-rangoli.netlify.app/')
+            : rawHref.split('?')[0].split('#')[0];
+          const cleanBase = base.replace(/\/+$/, '');
+          return `${cleanBase}/?room=${encodeURIComponent(state.roomCode)}#room=${encodeURIComponent(state.roomCode)}`;
+        } catch (e) {
+          return `https://utsav-rangoli.netlify.app/?room=${state.roomCode}#room=${state.roomCode}`;
+        }
+      }
+
+      function getWhatsappInviteMessage() {
+        const url = getShareableRoomUrl();
+        return `🪔✨ Come create a live Diwali Rangoli with me at Utsav Rangoli Studio!\n\n🔑 Room Code: ${state.roomCode}\n👉 Join Link: ${url}`;
+      }
+
+      function refreshShareWidgets() {
+        const url = getShareableRoomUrl();
+        const msg = getWhatsappInviteMessage();
+        const urlInput = document.getElementById('shareUrlInput');
+        const msgBox = document.getElementById('whatsappInviteText');
+        const waLink = document.getElementById('whatsappDirectLink');
+        const badge = document.getElementById('modalRoomCodeBadge');
+        const activeIdEl = document.getElementById('modalActiveRoomId');
+
+        if (urlInput) urlInput.value = url;
+        if (msgBox) msgBox.value = msg;
+        if (badge) badge.textContent = 'Room: ' + state.roomCode;
+        if (activeIdEl) activeIdEl.textContent = state.roomCode;
+        if (waLink) {
+          waLink.href = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(msg);
+        }
+      }
+
+      function buildFullSyncPayload(targetId) {
+        let canvasDataUrl = null;
+        try {
+          if (hasLocalCanvasChanges) {
+            canvasDataUrl = drawCanvas.toDataURL('image/png');
+          }
+        } catch (e) {}
+        return {
+          type: 'sync_state',
+          targetId: targetId || null,
+          canvasDataUrl,
+          props: state.props,
+          floorType: state.floorType,
+          nightGlow: state.nightGlow,
+          senderId: state.myId,
+          senderName: state.myName,
+          senderColor: state.color
+        };
+      }
+
+      function applyCanvasSnapshot(dataUrl) {
+        if (!dataUrl) return;
+        const img = new Image();
+        img.onload = () => {
+          drawCtx.drawImage(img, 0, 0, W, H);
+          hasLocalCanvasChanges = true;
+        };
+        img.src = dataUrl;
+      }
+
+      function initRoomNetworking(roomCode) {
+        state.roomCode = roomCode.toUpperCase().trim() || generateUniqueRoomId();
+        document.getElementById('roomCodeDisplay').textContent = state.roomCode;
+        document.getElementById('joinRoomInput').value = state.roomCode;
+        refreshShareWidgets();
+
+        try {
+          const url = new URL(window.location.href);
+          url.searchParams.set('room', state.roomCode);
+          url.hash = `room=${state.roomCode}`;
+          window.history.replaceState(null, '', url.toString());
+        } catch (e) {
+          try { window.history.replaceState(null, '', `#room=${state.roomCode}`); } catch (err) {}
+        }
+
+        // 1. Setup BroadcastChannel (Instant multi-tab sync on the same device)
+        if (bcChannel) {
+          try { bcChannel.close(); } catch (e) {}
+        }
+        if (typeof BroadcastChannel !== 'undefined') {
+          bcChannel = new BroadcastChannel('utsav_rangoli_' + state.roomCode);
+          bcChannel.onmessage = (ev) => {
+            if (ev.data && ev.data.senderId !== state.myId) {
+              handleIncomingNetworkEvent(ev.data);
+            }
+          };
+        }
+
+        // 2. Setup Cloud WebSocket MQTT Relay (Works across ALL mobile 4G/5G networks & WhatsApp browsers!)
+        setupCloudMqttRelay(state.roomCode);
+
+        // 3. Setup PeerJS WebRTC P2P Mesh with STUN servers as direct low-latency channel
+        setupPeerJS(state.roomCode);
+
+        // Announce presence & request canvas state from anyone already in the room
+        setTimeout(() => {
+          broadcastEvent({
+            type: 'hello',
+            senderId: state.myId,
+            senderName: state.myName,
+            senderColor: state.color
+          });
+        }, 250);
+
+        updateParticipantsUI();
+      }
+
+      function setupCloudMqttRelay(roomCode) {
+        if (typeof mqtt === 'undefined') return;
+        if (mqttClient) {
+          try { mqttClient.end(true); } catch (e) {}
+          mqttClient = null;
+        }
+
+        const cleanRoom = roomCode.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        mqttTopic = `utsav-rangoli-live-v2/room/${cleanRoom}`;
+
+        const brokers = [
+          'wss://broker.emqx.io:8084/mqtt',
+          'wss://broker.hivemq.com:8884/mqtt',
+          'wss://test.mosquitto.org:8081/mqtt'
+        ];
+        let brokerIndex = 0;
+
+        function connectNextBroker() {
+          const brokerUrl = brokers[brokerIndex % brokers.length];
+          try {
+            const client = mqtt.connect(brokerUrl, {
+              clientId: 'utsav_' + state.myId + '_' + Math.random().toString(16).slice(2, 6),
+              clean: true,
+              connectTimeout: 5000,
+              reconnectPeriod: 3000
+            });
+            mqttClient = client;
+
+            client.on('connect', () => {
+              setConnectionBadge('Live Cloud Synced', true);
+              client.subscribe(mqttTopic, { qos: 0 }, (err) => {
+                if (!err) {
+                  // Announce arrival over cloud relay so other devices send their canvas snapshot
+                  broadcastEvent({
+                    type: 'hello',
+                    senderId: state.myId,
+                    senderName: state.myName,
+                    senderColor: state.color
+                  });
+                }
+              });
+            });
+
+            client.on('message', (topic, messageBuffer) => {
+              if (topic !== mqttTopic) return;
+              try {
+                const data = JSON.parse(messageBuffer.toString());
+                handleIncomingNetworkEvent(data);
+              } catch (e) {}
+            });
+
+            client.on('error', () => {
+              brokerIndex++;
+              if (brokerIndex < brokers.length) {
+                try { client.end(true); } catch (e) {}
+                connectNextBroker();
+              }
+            });
+          } catch (e) {}
+        }
+
+        connectNextBroker();
+      }
+
+      function setupPeerJS(roomCode) {
+        if (typeof Peer === 'undefined') return;
+        try {
+          if (peerInstance) peerInstance.destroy();
+        } catch (e) {}
+        clientConns = [];
+        hostConn = null;
+
+        const hostPeerId = 'utsav-rangoli-room-' + roomCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const peerConfig = {
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun2.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+          }
+        };
+
+        try {
+          const peer = new Peer(hostPeerId, peerConfig);
+          peerInstance = peer;
+
+          peer.on('open', () => {
+            isRoomHost = true;
+            isCreatingFreshRoom = false;
+            setConnectionBadge('Live Room Synced', true);
+          });
+
+          peer.on('connection', (conn) => {
+            clientConns.push(conn);
+            conn.on('open', () => {
+              // Send full canvas bitmap + props state to the newly connected device!
+              conn.send(buildFullSyncPayload());
+            });
+            conn.on('data', (data) => {
+              handleIncomingNetworkEvent(data);
+              clientConns.forEach(c => {
+                if (c !== conn && c.open) {
+                  try { c.send(data); } catch (e) {}
+                }
+              });
+            });
+            conn.on('close', () => {
+              clientConns = clientConns.filter(c => c !== conn);
+            });
+          });
+
+          peer.on('error', (err) => {
+            if (err && err.type === 'unavailable-id') {
+              if (isCreatingFreshRoom) {
+                const retryId = generateUniqueRoomId();
+                initRoomNetworking(retryId);
+              } else {
+                isRoomHost = false;
+                connectAsClientToHost(hostPeerId, peerConfig);
+              }
+            }
+          });
+        } catch (e) {}
+      }
+
+      function connectAsClientToHost(hostPeerId, peerConfig) {
+        try {
+          const clientPeer = new Peer(undefined, peerConfig);
+          peerInstance = clientPeer;
+          clientPeer.on('open', () => {
+            const conn = clientPeer.connect(hostPeerId, { reliable: true, serialization: 'json' });
+            hostConn = conn;
+            conn.on('open', () => {
+              setConnectionBadge('Live Room Synced', true);
+              conn.send({
+                type: 'hello',
+                senderId: state.myId,
+                senderName: state.myName,
+                senderColor: state.color
+              });
+            });
+            conn.on('data', (data) => {
+              handleIncomingNetworkEvent(data);
+            });
+          });
+        } catch (e) {}
+      }
+
+      function setConnectionBadge(text, online) {
+        const statusEl = document.getElementById('connectionStatusText');
+        const dotEl = document.getElementById('connectionDot');
+        if (statusEl) statusEl.textContent = text;
+        if (dotEl) {
+          dotEl.className = online
+            ? 'w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse'
+            : 'w-1.5 h-1.5 rounded-full bg-amber-400';
+        }
+      }
+
+      function broadcastEvent(payload) {
+        payload.senderId = payload.senderId || state.myId;
+        payload.senderName = payload.senderName || state.myName;
+        payload.senderColor = payload.senderColor || state.color;
+        payload.msgId = payload.msgId || (state.myId + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7));
+        seenMsgIds.add(payload.msgId);
+        if (seenMsgIds.size > 2000) {
+          const first = seenMsgIds.values().next().value;
+          seenMsgIds.delete(first);
+        }
+
+        // 1. Local browser tabs
+        if (bcChannel) {
+          try { bcChannel.postMessage(payload); } catch (e) {}
+        }
+
+        // 2. Cloud MQTT WebSocket Relay (cross-device 4G/5G/Wi-Fi)
+        if (mqttClient && mqttClient.connected && mqttTopic) {
+          try {
+            mqttClient.publish(mqttTopic, JSON.stringify(payload), { qos: 0 });
+          } catch (e) {}
+        }
+
+        // 3. WebRTC PeerJS direct channel
+        if (isRoomHost && clientConns.length > 0) {
+          clientConns.forEach(c => {
+            if (c.open) {
+              try { c.send(payload); } catch (e) {}
+            }
+          });
+        } else if (hostConn && hostConn.open) {
+          try { hostConn.send(payload); } catch (e) {}
+        }
+      }
+
+      function broadcastCursorMove(x, y) {
+        const now = Date.now();
+        if (now - lastCursorSent < 55) return;
+        lastCursorSent = now;
+        broadcastEvent({
+          type: 'cursor',
+          x: Math.round(x),
+          y: Math.round(y),
+          senderId: state.myId,
+          senderName: state.myName,
+          senderColor: state.color
+        });
+      }
+
+      function handleIncomingNetworkEvent(data) {
+        if (!data || data.senderId === state.myId) return;
+        if (data.msgId) {
+          if (seenMsgIds.has(data.msgId)) return; // deduplicate across MQTT + WebRTC + BroadcastChannel
+          seenMsgIds.add(data.msgId);
+        }
+
+        // Track remote participant presence
+        if (data.senderId) {
+          const isNew = !state.peers[data.senderId];
+          state.peers[data.senderId] = {
+            ...(state.peers[data.senderId] || {}),
+            name: data.senderName || 'Artist',
+            color: data.senderColor || '#fbbf24',
+            lastSeen: Date.now()
+          };
+          if (isNew) {
+            updateParticipantsUI();
+            logActivity(`${data.senderName || 'An artist'} joined ${state.roomCode}`);
+            showToast(`${data.senderName || 'Friend'} joined the room!`);
+          }
+        }
+
+        switch (data.type) {
+          case 'hello':
+            // Reply with our presence and, if we have drawn anything or placed props, send the full canvas snapshot!
+            broadcastEvent(buildFullSyncPayload(data.senderId));
+            updateParticipantsUI();
+            break;
+
+          case 'cursor':
+            if (state.peers[data.senderId]) {
+              state.peers[data.senderId].x = data.x;
+              state.peers[data.senderId].y = data.y;
+            }
+            break;
+
+          case 'stroke':
+            if (data.p0 && data.p1 && data.opts) {
+              drawSymmetricSegment(data.p0, data.p1, data.opts);
+              if (state.peers[data.senderId]) {
+                state.peers[data.senderId].x = data.p1.x;
+                state.peers[data.senderId].y = data.p1.y;
+              }
+            }
+            break;
+
+          case 'prop_add':
+            if (data.prop && !state.props.some(p => p.id === data.prop.id)) {
+              state.props.push(data.prop);
+              playPopSound();
+            }
+            break;
+
+          case 'prop_update':
+            if (data.prop) {
+              const idx = state.props.findIndex(p => p.id === data.prop.id);
+              if (idx !== -1) state.props[idx] = data.prop;
+            }
+            break;
+
+          case 'prop_delete':
+            state.props = state.props.filter(p => p.id !== data.propId);
+            break;
+
+          case 'floor_change':
+            if (data.floorType) {
+              state.floorType = data.floorType;
+              document.getElementById('floorSelect').value = data.floorType;
+              renderFloorTexture();
+            }
+            break;
+
+          case 'sync_state':
+            if (data.canvasDataUrl) {
+              applyCanvasSnapshot(data.canvasDataUrl);
+            }
+            if (Array.isArray(data.props) && data.props.length > 0) {
+              data.props.forEach(incomingProp => {
+                const existingIdx = state.props.findIndex(p => p.id === incomingProp.id);
+                if (existingIdx === -1) {
+                  state.props.push(incomingProp);
+                } else {
+                  state.props[existingIdx] = incomingProp;
+                }
+              });
+            }
+            if (data.floorType && data.floorType !== state.floorType) {
+              state.floorType = data.floorType;
+              document.getElementById('floorSelect').value = data.floorType;
+              renderFloorTexture();
+            }
+            updateParticipantsUI();
+            break;
+
+          case 'preset':
+            if (data.presetName) {
+              drawStarterRangoli(data.presetName, false);
+            }
+            break;
+
+          case 'clear':
+            drawCtx.clearRect(0, 0, W, H);
+            hasLocalCanvasChanges = false;
+            state.props = [];
+            selectProp(null);
+            break;
+        }
+      }
+
+      // ==========================================
+      // 12. SIMULATED CO-CREATOR BOTS (FOR INSTANT MULTIPLAYER DEMO)
+      // ==========================================
+      function toggleSimCoopBots() {
+        state.simCoopActive = !state.simCoopActive;
+        const ind = document.getElementById('simCoopIndicator');
+        const btn = document.getElementById('toggleSimCoopBtn');
+
+        if (state.simCoopActive) {
+          ind.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-ping';
+          btn.classList.add('border-emerald-400/60', 'bg-emerald-950/40');
+          state.simBots = [
+            { id: 'bot_priya', name: 'Priya (Co-Op)', color: '#ec4899', angle: 0, radius: 165, speed: 0.025, tool: 'powder' },
+            { id: 'bot_kabir', name: 'Kabir (Co-Op)', color: '#facc15', angle: Math.PI, radius: 235, speed: -0.019, tool: 'pencil' }
+          ];
+          state.simBots.forEach(b => {
+            state.peers[b.id] = { name: b.name, color: b.color, x: CX, y: CY, lastSeen: Date.now(), isBot: true };
+          });
+          updateParticipantsUI();
+          logActivity('Priya & Kabir joined to co-create with you!');
+          showToast('Co-Op Bots active! Watch Priya & Kabir draw with you.');
+        } else {
+          ind.className = 'w-2 h-2 rounded-full bg-stone-500';
+          btn.classList.remove('border-emerald-400/60', 'bg-emerald-950/40');
+          state.simBots.forEach(b => delete state.peers[b.id]);
+          state.simBots = [];
+          updateParticipantsUI();
+          showToast('Demo Co-Op Bots paused.');
+        }
+      }
+
+      function stepSimCoopBots(time) {
+        state.simBots.forEach((bot, idx) => {
+          const prevAngle = bot.angle;
+          bot.angle += bot.speed;
+          const wavePrev = bot.radius + Math.sin(prevAngle * 6) * 28;
+          const waveCurr = bot.radius + Math.sin(bot.angle * 6) * 28;
+
+          const p0 = { x: CX + Math.cos(prevAngle) * wavePrev, y: CY + Math.sin(prevAngle) * wavePrev };
+          const p1 = { x: CX + Math.cos(bot.angle) * waveCurr, y: CY + Math.sin(bot.angle) * waveCurr };
+
+          drawSymmetricSegment(p0, p1, {
+            tool: bot.tool,
+            color: bot.color,
+            size: idx === 0 ? 13 : 9,
+            density: 75,
+            symmetry: 1,
+            mirror: false
+          });
+
+          if (state.peers[bot.id]) {
+            state.peers[bot.id].x = p1.x;
+            state.peers[bot.id].y = p1.y;
+            state.peers[bot.id].lastSeen = Date.now();
+          }
+
+          // Occasionally cycle bot colors
+          if (Math.random() < 0.008) {
+            const pick = RANGOLI_COLORS[Math.floor(Math.random() * RANGOLI_COLORS.length)];
+            bot.color = pick.hex;
+            if (state.peers[bot.id]) state.peers[bot.id].color = pick.hex;
+            bot.radius = 95 + Math.random() * 210;
+          }
+        });
+      }
+
+      // ==========================================
+      // 13. UI HELPERS & EVENT LISTENERS
+      // ==========================================
+      function updateParticipantsUI() {
+        const container = document.getElementById('participantsAvatars');
+        const label = document.getElementById('participantCountLabel');
+        const peerList = Object.values(state.peers);
+        const total = 1 + peerList.length;
+
+        const all = [{ name: state.myName + ' (You)', color: state.color }, ...peerList];
+        container.innerHTML = all.slice(0, 5).map(p => {
+          const initial = (p.name || 'A').charAt(0).toUpperCase();
+          return `<div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-stone-950 border border-stone-900" style="background:${p.color || '#f59e0b'}" title="${p.name}">${initial}</div>`;
+        }).join('');
+
+        label.textContent = total === 1 ? '1 Artist (You)' : `${total} Artists Live`;
+      }
+
+      function logActivity(msg) {
+        const feed = document.getElementById('activityFeed');
+        if (!feed) return;
+        const item = document.createElement('div');
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        item.innerHTML = `<span class="text-amber-400/70 font-mono">[${timeStr}]</span> ${msg}`;
+        feed.prepend(item);
+      }
+
+      let toastTimer = null;
+      function showToast(msg) {
+        const banner = document.getElementById('toastBanner');
+        const text = document.getElementById('toastMessage');
+        text.textContent = msg;
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          banner.classList.add('hidden');
+          banner.classList.remove('flex');
+        }, 3200);
+      }
+
+      function robustCopyText(textToCopy, visibleInputEl, successLabel) {
+        let copiedSync = false;
+        // 1. Always try synchronous execCommand('copy') first while inside direct user click gesture
+        try {
+          const temp = document.createElement('textarea');
+          temp.value = textToCopy;
+          temp.setAttribute('readonly', '');
+          temp.style.position = 'fixed';
+          temp.style.top = '0';
+          temp.style.left = '0';
+          temp.style.width = '2em';
+          temp.style.height = '2em';
+          temp.style.padding = '0';
+          temp.style.border = 'none';
+          temp.style.outline = 'none';
+          temp.style.boxShadow = 'none';
+          temp.style.background = 'transparent';
+          temp.style.opacity = '0.01';
+          document.body.appendChild(temp);
+          temp.focus();
+          temp.select();
+          temp.setSelectionRange(0, temp.value.length);
+          copiedSync = document.execCommand('copy');
+          document.body.removeChild(temp);
+        } catch (e) {}
+
+        // 2. Also attempt navigator.clipboard.writeText if available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textToCopy).catch(() => {});
+        }
+
+        // 3. Highlight the visible input box so the user sees it selected and can also press Ctrl+C / Cmd+C
+        if (visibleInputEl) {
+          try {
+            visibleInputEl.focus();
+            visibleInputEl.select();
+            visibleInputEl.setSelectionRange(0, visibleInputEl.value.length);
+          } catch (e) {}
+        }
+
+        showToast(successLabel || `Copied (${state.roomCode})!`);
+        playBellChime(659.25);
+        return copiedSync;
+      }
+
+      function openShareModalAndSelect() {
+        refreshShareWidgets();
+        const roomModal = document.getElementById('roomModal');
+        roomModal.classList.remove('hidden');
+        roomModal.classList.add('flex');
+      }
+
+      function copyRoomLinkToClipboard() {
+        refreshShareWidgets();
+        const url = getShareableRoomUrl();
+        const input = document.getElementById('shareUrlInput');
+        // Open the modal so the link and WhatsApp share button are immediately visible
+        openShareModalAndSelect();
+        robustCopyText(url, input, `Room link copied! Ready to paste on WhatsApp.`);
+
+        const btnText = document.getElementById('copyLinkBtnText');
+        const modalBtn = document.getElementById('modalCopyUrlBtn');
+        if (btnText) btnText.textContent = 'Copied ✓';
+        if (modalBtn) modalBtn.textContent = 'Copied ✓';
+        setTimeout(() => {
+          if (btnText) btnText.textContent = 'Share Link';
+          if (modalBtn) modalBtn.textContent = 'Copy';
+        }, 2200);
+      }
+
+      function setPlacingPropMode(propType) {
+        state.placingPropType = propType;
+        document.querySelectorAll('#diwaliPropsGrid .prop-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-prop') === propType);
+        });
+        const hint = document.getElementById('canvasHintBanner');
+        const badge = document.getElementById('activeModeBadge');
+        if (propType) {
+          hint.textContent = `Tap anywhere on the Rangoli to place ${formatPropName(propType)} (or tap button again to cancel)`;
+          badge.textContent = 'Placing ' + formatPropName(propType);
+          drawCanvas.style.cursor = 'copy';
+        } else {
+          hint.textContent = 'Hand-Drawn Mode: Draw freely anywhere on the courtyard • Click any Diya on the right to place it';
+          badge.textContent = state.tool.charAt(0).toUpperCase() + state.tool.slice(1);
+          drawCanvas.style.cursor = 'crosshair';
+        }
+      }
+
+      function buildColorSwatches() {
+        const grid = document.getElementById('colorPaletteGrid');
+        grid.innerHTML = '';
+        RANGOLI_COLORS.forEach((c, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'swatch-btn w-7 h-7 rounded-full border border-white/25 mx-auto ' + (idx === 0 ? 'active' : '');
+          btn.style.backgroundColor = c.hex;
+          btn.title = c.name;
+          btn.addEventListener('click', () => {
+            state.color = c.hex;
+            state.colorName = c.name;
+            if (state.tool === 'eraser') setActiveTool('powder');
+            setPlacingPropMode(null);
+            document.getElementById('selectedColorName').textContent = c.name;
+            document.querySelectorAll('#colorPaletteGrid .swatch-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            updateParticipantsUI();
+          });
+          grid.appendChild(btn);
+        });
+      }
+
+      function setActiveTool(toolName) {
+        state.tool = toolName;
+        setPlacingPropMode(null);
+        document.querySelectorAll('[data-tool]').forEach(btn => {
+          btn.classList.toggle('active', btn.getAttribute('data-tool') === toolName);
+        });
+        document.getElementById('activeModeBadge').textContent =
+          toolName.charAt(0).toUpperCase() + toolName.slice(1);
+      }
+
+      function exportCompositePNG() {
+        const outCanvas = document.createElement('canvas');
+        outCanvas.width = W;
+        outCanvas.height = H;
+        const outCtx = outCanvas.getContext('2d');
+
+        outCtx.drawImage(floorCanvas, 0, 0);
+        outCtx.drawImage(drawCanvas, 0, 0);
+        outCtx.drawImage(itemsCanvas, 0, 0);
+
+        // Festive watermark footer
+        outCtx.fillStyle = 'rgba(254, 243, 199, 0.7)';
+        outCtx.font = '600 14px Playfair Display, Georgia, serif';
+        outCtx.fillText(`🪔 Utsav Rangoli Studio • Room ${state.roomCode}`, 24, H - 22);
+
+        const link = document.createElement('a');
+        link.download = `rangoli-${state.roomCode.toLowerCase()}.png`;
+        link.href = outCanvas.toDataURL('image/png');
+        link.click();
+        showToast('Saved high-resolution Rangoli PNG!');
+      }
+
+      // ==========================================
+      // 14. INITIALIZATION & WIRING
+      // ==========================================
+      function initApp() {
+        buildColorSwatches();
+        renderFloorTexture();
+        renderGuideOverlay();
+
+        // Start with a clean courtyard so the entire Rangoli is hand-drawn from scratch
+        drawCtx.clearRect(0, 0, W, H);
+        selectProp(null);
+        drawCanvas.style.cursor = 'crosshair';
+
+        // Wire Tool Buttons
+        document.querySelectorAll('[data-tool]').forEach(btn => {
+          btn.addEventListener('click', () => setActiveTool(btn.getAttribute('data-tool')));
+        });
+
+        // Wire Custom Color Picker
+        document.getElementById('customColorPicker').addEventListener('input', (e) => {
+          state.color = e.target.value;
+          state.colorName = 'Custom Shade';
+          document.getElementById('selectedColorName').textContent = state.colorName;
+          document.querySelectorAll('#colorPaletteGrid .swatch-btn').forEach(b => b.classList.remove('active'));
+          if (state.tool === 'eraser') setActiveTool('powder');
+        });
+
+        // Wire Brush Sliders
+        document.getElementById('brushSizeInput').addEventListener('input', (e) => {
+          state.brushSize = parseInt(e.target.value, 10);
+          document.getElementById('brushSizeLabel').textContent = state.brushSize + ' px';
+        });
+        document.getElementById('brushDensityInput').addEventListener('input', (e) => {
+          state.brushDensity = parseInt(e.target.value, 10);
+          document.getElementById('brushDensityLabel').textContent = state.brushDensity + '%';
+        });
+
+        // Wire Symmetry Buttons
+        document.querySelectorAll('.sym-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.symmetry = parseInt(btn.getAttribute('data-sym'), 10);
+            document.querySelectorAll('.sym-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderGuideOverlay();
+          });
+        });
+
+        document.getElementById('mirrorToggle').addEventListener('change', (e) => {
+          state.mirror = e.target.checked;
+        });
+
+        document.getElementById('guideSelect').addEventListener('change', (e) => {
+          state.guideMode = e.target.value;
+          renderGuideOverlay();
+        });
+
+        document.getElementById('floorSelect').addEventListener('change', (e) => {
+          state.floorType = e.target.value;
+          renderFloorTexture();
+          broadcastEvent({ type: 'floor_change', floorType: state.floorType });
+        });
+
+        // Starter Presets
+        document.getElementById('presetLotusBtn').addEventListener('click', () => drawStarterRangoli('lotus', true));
+        document.getElementById('presetStarBtn').addEventListener('click', () => drawStarterRangoli('chakra', true));
+        document.getElementById('presetKolamBtn').addEventListener('click', () => drawStarterRangoli('kolam', true));
+
+        // Diwali Props Buttons
+        document.querySelectorAll('#diwaliPropsGrid .prop-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const pType = btn.getAttribute('data-prop');
+            if (state.placingPropType === pType) {
+              setPlacingPropMode(null);
+            } else {
+              setPlacingPropMode(pType);
+            }
+          });
+        });
+
+        // Auto-place 8 Diyas in Circle
+        document.getElementById('autoPlaceDiyaRingBtn').addEventListener('click', () => {
+          for (let i = 0; i < 8; i++) {
+            const ang = (i * Math.PI * 2) / 8;
+            const px = CX + Math.cos(ang) * 305;
+            const py = CY + Math.sin(ang) * 305;
+            const rot = ((ang + Math.PI / 2) * 180) / Math.PI;
+            addProp('clay_diya', px, py, 0.9, rot, null, true);
+          }
+          playBellChime(659.25);
+          showToast('Placed 8 glowing Mitti Diyas around your Rangoli!');
+        });
+
+        // Selected Prop Inspector Controls
+        document.getElementById('propScaleInput').addEventListener('input', (e) => {
+          const prop = state.props.find(p => p.id === state.selectedPropId);
+          if (prop) {
+            prop.scale = parseInt(e.target.value, 10) / 100;
+            document.getElementById('propScaleLabel').textContent = e.target.value + '%';
+            broadcastEvent({ type: 'prop_update', prop });
+          }
+        });
+
+        document.getElementById('propRotateInput').addEventListener('input', (e) => {
+          const prop = state.props.find(p => p.id === state.selectedPropId);
+          if (prop) {
+            prop.rotation = parseInt(e.target.value, 10);
+            document.getElementById('propRotateLabel').textContent = e.target.value + '°';
+            broadcastEvent({ type: 'prop_update', prop });
+          }
+        });
+
+        document.getElementById('duplicatePropBtn').addEventListener('click', () => {
+          const prop = state.props.find(p => p.id === state.selectedPropId);
+          if (prop) {
+            addProp(prop.type, Math.min(W - 40, prop.x + 36), Math.min(H - 40, prop.y + 36), prop.scale, prop.rotation, null, true);
+          }
+        });
+
+        document.getElementById('deletePropBtn').addEventListener('click', () => {
+          if (!state.selectedPropId) return;
+          const idToDel = state.selectedPropId;
+          state.props = state.props.filter(p => p.id !== idToDel);
+          selectProp(null);
+          broadcastEvent({ type: 'prop_delete', propId: idToDel });
+        });
+
+        // Undo & Clear
+        document.getElementById('undoBtn').addEventListener('click', () => {
+          if (state.undoStack.length > 0) {
+            const prev = state.undoStack.pop();
+            drawCtx.putImageData(prev, 0, 0);
+            showToast('Undid last stroke');
+          }
+        });
+
+        document.getElementById('clearDrawingBtn').addEventListener('click', () => {
+          saveUndoSnapshot();
+          drawCtx.clearRect(0, 0, W, H);
+          state.props = [];
+          selectProp(null);
+          broadcastEvent({ type: 'clear' });
+          logActivity(`${state.myName} cleared the courtyard`);
+          showToast('Cleared Rangoli courtyard');
+        });
+
+        // Night Glow Slider
+        document.getElementById('nightGlowSlider').addEventListener('input', (e) => {
+          state.nightGlow = parseInt(e.target.value, 10);
+        });
+
+        // Artist Name
+        document.getElementById('artistNameInput').value = state.myName;
+        document.getElementById('saveNameBtn').addEventListener('click', () => {
+          const val = document.getElementById('artistNameInput').value.trim();
+          if (val) {
+            state.myName = val;
+            updateParticipantsUI();
+            broadcastEvent({ type: 'hello' });
+            showToast(`Updated artist name to ${val}`);
+          }
+        });
+
+        // Room Modal, Create New Room, Share Room & Join Room
+        const roomModal = document.getElementById('roomModal');
+
+        function createBrandNewRoom() {
+          isCreatingFreshRoom = true;
+          const uniqueCode = generateUniqueRoomId();
+          drawCtx.clearRect(0, 0, W, H);
+          state.props = [];
+          state.peers = {};
+          selectProp(null);
+          initRoomNetworking(uniqueCode);
+          openShareModalAndSelect();
+          playBellChime(587.33);
+          showToast(`Created new unique room: ${uniqueCode}`);
+          logActivity(`Created new unique room ${uniqueCode}`);
+        }
+
+        document.getElementById('openRoomModalBtn').addEventListener('click', () => {
+          openShareModalAndSelect();
+        });
+        document.getElementById('closeRoomModalBtn').addEventListener('click', () => {
+          roomModal.classList.add('hidden');
+          roomModal.classList.remove('flex');
+        });
+        document.getElementById('headerCreateRoomBtn').addEventListener('click', createBrandNewRoom);
+        document.getElementById('modalCreateNewRoomBtn').addEventListener('click', createBrandNewRoom);
+        document.getElementById('randomRoomBtn').addEventListener('click', createBrandNewRoom);
+
+        document.getElementById('copyRoomLinkBtn').addEventListener('click', copyRoomLinkToClipboard);
+        document.getElementById('modalCopyUrlBtn').addEventListener('click', copyRoomLinkToClipboard);
+
+        document.getElementById('headerWhatsappBtn').addEventListener('click', () => {
+          openShareModalAndSelect();
+          const msg = getWhatsappInviteMessage();
+          const msgBox = document.getElementById('whatsappInviteText');
+          robustCopyText(msg, msgBox, 'WhatsApp invite copied! Click "Send on WhatsApp" below.');
+        });
+
+        document.getElementById('copyWhatsappMsgBtn').addEventListener('click', () => {
+          refreshShareWidgets();
+          const msg = getWhatsappInviteMessage();
+          const msgBox = document.getElementById('whatsappInviteText');
+          robustCopyText(msg, msgBox, 'Copied full WhatsApp invitation message!');
+        });
+
+        document.getElementById('joinRoomConfirmBtn').addEventListener('click', () => {
+          const newCode = document.getElementById('joinRoomInput').value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+          if (newCode) {
+            isCreatingFreshRoom = false;
+            usedRoomIds.add(newCode);
+            initRoomNetworking(newCode);
+            roomModal.classList.add('hidden');
+            roomModal.classList.remove('flex');
+            showToast(`Joined Room ${state.roomCode}`);
+            logActivity(`Joined existing room ${state.roomCode}`);
+          }
+        });
+
+        // Demo Co-Op Toggle
+        document.getElementById('toggleSimCoopBtn').addEventListener('click', toggleSimCoopBots);
+
+        // Sound Toggle
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+          state.soundEnabled = !state.soundEnabled;
+          document.getElementById('soundOnIcon').classList.toggle('hidden', !state.soundEnabled);
+          document.getElementById('soundOffIcon').classList.toggle('hidden', state.soundEnabled);
+          showToast(state.soundEnabled ? 'Festive sound effects enabled' : 'Sound muted');
+        });
+
+        // Download PNG
+        document.getElementById('downloadBtn').addEventListener('click', exportCompositePNG);
+
+        // Pointer & Touch Events on drawCanvas
+        drawCanvas.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+
+        drawCanvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+        window.addEventListener('touchmove', handlePointerMove, { passive: false });
+        window.addEventListener('touchend', handlePointerUp);
+
+        // Prepare Initial Room ID & Welcome Entry Gate
+        const hasUrlRoom = Boolean(
+          (window.location.search && new URLSearchParams(window.location.search).get('room')) ||
+          (window.location.hash && window.location.hash.includes('room='))
+        );
+        const initialRoomCode = getRoomFromUrl();
+
+        const entryGate = document.getElementById('welcomeEntryGate');
+        const entryNameIn = document.getElementById('entryArtistNameInput');
+        const entryRoomIn = document.getElementById('entryRoomCodeInput');
+        const entryErr = document.getElementById('entryNameError');
+        const invitedBanner = document.getElementById('entryInvitedBanner');
+        const invitedCodeEl = document.getElementById('entryInvitedRoomCode');
+        const enterBtnLabel = document.getElementById('enterCourtyardBtnLabel');
+
+        entryRoomIn.value = initialRoomCode;
+        // Clear pre-filled random name so the user enters their own name
+        document.getElementById('artistNameInput').value = '';
+
+        if (hasUrlRoom) {
+          invitedBanner.classList.remove('hidden');
+          invitedCodeEl.textContent = initialRoomCode;
+          enterBtnLabel.textContent = `Join Room ${initialRoomCode}`;
+        } else {
+          enterBtnLabel.textContent = 'Create & Enter Rangoli Room';
+        }
+
+        document.getElementById('entryNewUniqueIdBtn').addEventListener('click', () => {
+          isCreatingFreshRoom = true;
+          const freshId = generateUniqueRoomId();
+          entryRoomIn.value = freshId;
+          invitedBanner.classList.add('hidden');
+          enterBtnLabel.textContent = `Create & Enter Room (${freshId})`;
+        });
+
+        entryRoomIn.addEventListener('input', () => {
+          const val = entryRoomIn.value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+          if (val) {
+            enterBtnLabel.textContent = `Enter Room ${val}`;
+          }
+        });
+
+        function submitWelcomeEntry() {
+          const enteredName = entryNameIn.value.trim();
+          if (!enteredName) {
+            entryErr.classList.remove('hidden');
+            entryNameIn.focus();
+            return;
+          }
+          entryErr.classList.add('hidden');
+          state.myName = enteredName;
+          document.getElementById('artistNameInput').value = enteredName;
+
+          const chosenRoom = entryRoomIn.value.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '') || generateUniqueRoomId();
+          usedRoomIds.add(chosenRoom);
+
+          // Hide the welcome gate
+          entryGate.classList.add('hidden');
+          entryGate.classList.remove('flex');
+
+          // Connect to the chosen/created room with the user's entered name
+          initRoomNetworking(chosenRoom);
+          updateParticipantsUI();
+          broadcastEvent({
+            type: 'hello',
+            senderId: state.myId,
+            senderName: state.myName,
+            senderColor: state.color
+          });
+          playBellChime(587.33);
+          showToast(`Welcome, ${state.myName}! Joined ${state.roomCode}`);
+          logActivity(`${state.myName} entered Room ${state.roomCode}`);
+        }
+
+        document.getElementById('enterCourtyardBtn').addEventListener('click', submitWelcomeEntry);
+        entryNameIn.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            submitWelcomeEntry();
+          }
+        });
+        entryNameIn.addEventListener('input', () => {
+          if (entryNameIn.value.trim()) {
+            entryErr.classList.add('hidden');
+          }
+        });
+
+        // Pre-populate room display & URL before entry so shared links always match
+        state.roomCode = initialRoomCode;
+        document.getElementById('roomCodeDisplay').textContent = initialRoomCode;
+        try {
+          const u = new URL(window.location.href);
+          u.searchParams.set('room', initialRoomCode);
+          u.hash = `room=${initialRoomCode}`;
+          window.history.replaceState(null, '', u.toString());
+        } catch (e) {}
+        refreshShareWidgets();
+        setTimeout(() => {
+          try { entryNameIn.focus(); } catch (e) {}
+        }, 80);
+
+        // Start 60fps animation loop for flickering flames & remote cursors
+        requestAnimationFrame(animateStage);
+      }
+
+      window.addEventListener('DOMContentLoaded', initApp);
+    })();
+  </script>
+</body>
+</html>
